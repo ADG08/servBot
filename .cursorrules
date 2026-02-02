@@ -42,3 +42,17 @@ You are an expert Go developer. Follow these rules strictly to maintain a modern
 4. Run `sqlc generate`.
 5. Implement the Repository in `infrastructure/database`.
 6. Wire everything in `application/services` using dependency injection.
+
+## 6. Linear Issues Template (when asked to create or format issues)
+Use this format for every issue (title, description, acceptance, label):
+
+- **Titre:** Short, imperative (e.g. `Event: ajouter date/heure (schema + modal + parsing)`).
+- **Description:** Bullet list of what to do (scope, technical hints, dependencies). No prose.
+- **Acceptance:** One or two outcome-focused criteria (how to verify done).
+
+**Labels:**
+- **feature** — New capability, new flow, or UX change (user- or product-facing).
+- **fix** — Correcting wrong or missing behavior in existing code (e.g. restrict edit after finalize).
+- **refactor** — Config, refactor, tech debt; no new user-facing behavior (e.g. move channel IDs to env).
+
+When the user asks for "une issue" or "un template d'issue", respond with the three blocks (Titre, Description, Acceptance) and suggest the label.
