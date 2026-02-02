@@ -1,0 +1,44 @@
+---
+description: 
+alwaysApply: true
+---
+
+# Go Hexagonal Architecture Rules (sqlc + pgx)
+
+You are an expert Go developer. Follow these rules strictly to maintain a modern, scalable, and clean codebase.
+
+## 1. Architectural Integrity
+- **Strict Dependency Rule**: Dependencies only point inwards. 
+    - `domain` must NEVER import anything from `application`, `infrastructure`, or `ports`.
+    - `application` only imports from `domain` and `ports`.
+    - `infrastructure` implements `ports` and imports `domain`.
+- **Entities**: Keep `internal/domain/entities` as pure Go structs. No database tags (like `db:""` or `json:""`) unless absolutely necessary for the core.
+- **Ports (Interfaces)**: 
+    - Use `internal/ports/output` for database repositories and external API clients.
+    - Use `internal/ports/input` for service interfaces called by the Discord bot or API.
+
+## 2. Go Best Practices (Modern Go)
+- **Constructors**: Use `New...` functions to initialize structs (e.g., `func NewUserService(...) *UserService`).
+- **Interfaces**: Define interfaces where they are USED (consumer-side), but in this hexagonal setup, keep them in the `ports` layer as contracts.
+- **Error Handling**: 
+    - Use centralized errors in `internal/domain/errors`.
+    - Wrap errors with context using `fmt.Errorf("context: %w", err)`.
+- **Context**: Always pass `context.Context` as the first argument in database and service methods.
+
+## 3. Database Layer (sqlc + pgx)
+- **sqlc**: Never manually edit code in `internal/infrastructure/database/sqlc_generated/` (or your sqlc output folder). 
+- **Repository Implementation**: The code in `internal/infrastructure/database` must implement the interfaces defined in `internal/ports/output`.
+- **pgx**: Use `pgxpool.Pool` for connection management.
+
+## 4. Coding Style
+- **Minimalist Comments**: Comments should explain **WHY**, not **WHAT**. If the code is clear, no comment is needed.
+- **Naming**: Be concise. Avoid `UserObject` or `UserStruct`, just use `User`.
+- **No .md Bloat**: Do not create new documentation files. Update existing code or comments only.
+
+## 5. Implementation Workflow
+1. Define the **Entity** in `domain/entities`.
+2. Define the **Contract** in `ports/output` (Repository interface) or `ports/input`.
+3. Create the **SQL** in `sqlc/queries/`.
+4. Run `sqlc generate`.
+5. Implement the Repository in `infrastructure/database`.
+6. Wire everything in `application/services` using dependency injection.

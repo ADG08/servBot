@@ -1,0 +1,61 @@
+package application
+
+import (
+	"context"
+
+	"servbot/internal/domain"
+	"servbot/internal/domain/entities"
+	"servbot/internal/ports/output"
+)
+
+// EventService implements input.EventUseCase (application / use case).
+type EventService struct {
+	eventRepo       output.EventRepository
+	participantRepo output.ParticipantRepository
+}
+
+// NewEventService creates an EventService.
+func NewEventService(
+	eventRepo output.EventRepository,
+	participantRepo output.ParticipantRepository,
+) *EventService {
+	return &EventService{
+		eventRepo:       eventRepo,
+		participantRepo: participantRepo,
+	}
+}
+
+func (s *EventService) CreateEvent(ctx context.Context, event *entities.Event) error {
+	return s.eventRepo.Create(ctx, event)
+}
+
+func (s *EventService) GetEventByMessageID(ctx context.Context, messageID string) (*entities.Event, error) {
+	return s.eventRepo.FindByMessageID(ctx, messageID)
+}
+
+func (s *EventService) GetEventByID(ctx context.Context, id uint) (*entities.Event, error) {
+	return s.eventRepo.FindByID(ctx, id)
+}
+
+func (s *EventService) UpdateEvent(ctx context.Context, event *entities.Event) error {
+	confirmedCount, err := s.participantRepo.CountByEventIDAndStatus(ctx, event.ID, domain.StatusConfirmed)
+	if err != nil {
+		return err
+	}
+	if event.MaxSlots > 0 && int(confirmedCount) > event.MaxSlots {
+		return domain.ErrCannotReduceSlots
+	}
+	return s.eventRepo.Update(ctx, event)
+}
+
+func (s *EventService) GetWaitlistParticipants(ctx context.Context, eventID uint) ([]entities.Participant, error) {
+	return s.participantRepo.FindByEventIDAndStatus(ctx, eventID, domain.StatusWaitlist)
+}
+
+func (s *EventService) GetConfirmedParticipants(ctx context.Context, eventID uint) ([]entities.Participant, error) {
+	return s.participantRepo.FindByEventIDAndStatus(ctx, eventID, domain.StatusConfirmed)
+}
+
+func (s *EventService) GetEventsByCreatorID(ctx context.Context, creatorID string) ([]entities.Event, error) {
+	return s.eventRepo.FindByCreatorID(ctx, creatorID)
+}

@@ -1,0 +1,18 @@
+# Environment
+.env
+.env.local
+
+# Binaries
+/servbot
+*.exe
+
+# SQLite (no longer used; kept so old *.db files are not committed)
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store

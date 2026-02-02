@@ -1,0 +1,27 @@
+# Git
+.git
+.gitignore
+
+# Environment (use env_file in compose; do not bake into image)
+.env
+.env.*
+
+# Build / IDE
+.DS_Store
+.idea
+.vscode
+*.db
+*.db-journal
+
+# Docs (optional; remove if you want them in image)
+*.md
+!README.md
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Test / coverage
+coverage.out
+*.test
