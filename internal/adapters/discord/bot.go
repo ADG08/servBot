@@ -70,8 +70,6 @@ func (b *Bot) handleInteraction(s *discordgo.Session, i *discordgo.InteractionCr
 			b.handler.HandleRemoveParticipant(s, i)
 		} else if strings.HasPrefix(customID, "btn_edit_event_") {
 			b.handler.HandleEditEvent(s, i)
-		} else if strings.HasPrefix(customID, "btn_create_sortie_chat_") {
-			b.handler.HandleCreateSortieChat(s, i)
 		} else {
 			switch customID {
 			case "btn_join":

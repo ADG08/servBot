@@ -12,19 +12,21 @@ import (
 )
 
 const createEvent = `-- name: CreateEvent :one
-INSERT INTO events (message_id, channel_id, creator_id, title, description, max_slots, scheduled_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
-RETURNING id, message_id, channel_id, creator_id, title, description, max_slots, scheduled_at, created_at, updated_at
+INSERT INTO events (message_id, channel_id, creator_id, title, description, max_slots, scheduled_at, private_channel_id, questions_thread_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+RETURNING id, message_id, channel_id, creator_id, title, description, max_slots, scheduled_at, private_channel_id, questions_thread_id, created_at, updated_at
 `
 
 type CreateEventParams struct {
-	MessageID   string
-	ChannelID   string
-	CreatorID   string
-	Title       string
-	Description string
-	MaxSlots    int32
-	ScheduledAt pgtype.Timestamptz
+	MessageID         string
+	ChannelID         string
+	CreatorID         string
+	Title             string
+	Description       string
+	MaxSlots          int32
+	ScheduledAt       pgtype.Timestamptz
+	PrivateChannelID  string
+	QuestionsThreadID string
 }
 
 func (q *Queries) CreateEvent(ctx context.Context, arg CreateEventParams) (Event, error) {
@@ -36,6 +38,8 @@ func (q *Queries) CreateEvent(ctx context.Context, arg CreateEventParams) (Event
 		arg.Description,
 		arg.MaxSlots,
 		arg.ScheduledAt,
+		arg.PrivateChannelID,
+		arg.QuestionsThreadID,
 	)
 	var i Event
 	err := row.Scan(
@@ -47,6 +51,8 @@ func (q *Queries) CreateEvent(ctx context.Context, arg CreateEventParams) (Event
 		&i.Description,
 		&i.MaxSlots,
 		&i.ScheduledAt,
+		&i.PrivateChannelID,
+		&i.QuestionsThreadID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -63,7 +69,7 @@ func (q *Queries) DeleteEvent(ctx context.Context, id int64) error {
 }
 
 const getEventByID = `-- name: GetEventByID :one
-SELECT id, message_id, channel_id, creator_id, title, description, max_slots, scheduled_at, created_at, updated_at FROM events WHERE id = $1
+SELECT id, message_id, channel_id, creator_id, title, description, max_slots, scheduled_at, private_channel_id, questions_thread_id, created_at, updated_at FROM events WHERE id = $1
 `
 
 func (q *Queries) GetEventByID(ctx context.Context, id int64) (Event, error) {
@@ -78,6 +84,8 @@ func (q *Queries) GetEventByID(ctx context.Context, id int64) (Event, error) {
 		&i.Description,
 		&i.MaxSlots,
 		&i.ScheduledAt,
+		&i.PrivateChannelID,
+		&i.QuestionsThreadID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -85,7 +93,7 @@ func (q *Queries) GetEventByID(ctx context.Context, id int64) (Event, error) {
 }
 
 const getEventByMessageID = `-- name: GetEventByMessageID :one
-SELECT id, message_id, channel_id, creator_id, title, description, max_slots, scheduled_at, created_at, updated_at FROM events WHERE message_id = $1
+SELECT id, message_id, channel_id, creator_id, title, description, max_slots, scheduled_at, private_channel_id, questions_thread_id, created_at, updated_at FROM events WHERE message_id = $1
 `
 
 func (q *Queries) GetEventByMessageID(ctx context.Context, messageID string) (Event, error) {
@@ -100,6 +108,8 @@ func (q *Queries) GetEventByMessageID(ctx context.Context, messageID string) (Ev
 		&i.Description,
 		&i.MaxSlots,
 		&i.ScheduledAt,
+		&i.PrivateChannelID,
+		&i.QuestionsThreadID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -107,7 +117,7 @@ func (q *Queries) GetEventByMessageID(ctx context.Context, messageID string) (Ev
 }
 
 const getEventsByCreatorID = `-- name: GetEventsByCreatorID :many
-SELECT id, message_id, channel_id, creator_id, title, description, max_slots, scheduled_at, created_at, updated_at FROM events WHERE creator_id = $1 ORDER BY created_at DESC
+SELECT id, message_id, channel_id, creator_id, title, description, max_slots, scheduled_at, private_channel_id, questions_thread_id, created_at, updated_at FROM events WHERE creator_id = $1 ORDER BY created_at DESC
 `
 
 func (q *Queries) GetEventsByCreatorID(ctx context.Context, creatorID string) ([]Event, error) {
@@ -128,6 +138,8 @@ func (q *Queries) GetEventsByCreatorID(ctx context.Context, creatorID string) ([
 			&i.Description,
 			&i.MaxSlots,
 			&i.ScheduledAt,
+			&i.PrivateChannelID,
+			&i.QuestionsThreadID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {

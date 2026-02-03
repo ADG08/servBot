@@ -1,6 +1,6 @@
 -- name: CreateEvent :one
-INSERT INTO events (message_id, channel_id, creator_id, title, description, max_slots, scheduled_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
+INSERT INTO events (message_id, channel_id, creator_id, title, description, max_slots, scheduled_at, private_channel_id, questions_thread_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 RETURNING *;
 
 -- name: GetEventByMessageID :one
