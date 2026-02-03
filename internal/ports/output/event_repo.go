@@ -6,7 +6,6 @@ import (
 	"servbot/internal/domain/entities"
 )
 
-// EventRepository defines persistence for events (output port).
 type EventRepository interface {
 	Create(ctx context.Context, event *entities.Event) error
 	FindByMessageID(ctx context.Context, messageID string) (*entities.Event, error)

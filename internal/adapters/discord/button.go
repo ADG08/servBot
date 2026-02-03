@@ -2,6 +2,7 @@ package discord
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"regexp"
@@ -24,7 +25,7 @@ func (h *Handler) HandleJoin(s *discordgo.Session, i *discordgo.InteractionCreat
 
 	reply, err := h.participantUseCase.JoinEvent(ctx, event.ID, userID, username)
 	if err != nil {
-		if err == domain.ErrParticipantExists {
+		if errors.Is(err, domain.ErrParticipantExists) {
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{

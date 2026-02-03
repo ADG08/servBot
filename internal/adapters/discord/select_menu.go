@@ -2,6 +2,7 @@ package discord
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -82,10 +83,10 @@ func (h *Handler) HandlePromote(s *discordgo.Session, i *discordgo.InteractionCr
 		return
 	}
 	selectedValue := data.Values[0]
-	if !strings.HasPrefix(selectedValue, "promote_") {
+	idStr, ok := strings.CutPrefix(selectedValue, "promote_")
+	if !ok {
 		return
 	}
-	idStr := strings.TrimPrefix(selectedValue, "promote_")
 	participantID, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
 		return
@@ -93,7 +94,7 @@ func (h *Handler) HandlePromote(s *discordgo.Session, i *discordgo.InteractionCr
 
 	participant, err := h.participantUseCase.PromoteParticipant(ctx, uint(participantID), i.Member.User.ID)
 	if err != nil {
-		if err == domain.ErrNotOrganizer {
+		if errors.Is(err, domain.ErrNotOrganizer) {
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
@@ -193,10 +194,10 @@ func (h *Handler) HandleRemove(s *discordgo.Session, i *discordgo.InteractionCre
 		return
 	}
 	selectedValue := data.Values[0]
-	if !strings.HasPrefix(selectedValue, "remove_") {
+	idStr, ok := strings.CutPrefix(selectedValue, "remove_")
+	if !ok {
 		return
 	}
-	idStr := strings.TrimPrefix(selectedValue, "remove_")
 	participantID, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
 		return
@@ -204,7 +205,7 @@ func (h *Handler) HandleRemove(s *discordgo.Session, i *discordgo.InteractionCre
 
 	participant, err := h.participantUseCase.RemoveParticipant(ctx, uint(participantID), i.Member.User.ID)
 	if err != nil {
-		if err == domain.ErrNotOrganizer {
+		if errors.Is(err, domain.ErrNotOrganizer) {
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{

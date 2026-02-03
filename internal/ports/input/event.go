@@ -6,7 +6,6 @@ import (
 	"servbot/internal/domain/entities"
 )
 
-// EventUseCase defines application use cases for events (input port).
 type EventUseCase interface {
 	CreateEvent(ctx context.Context, event *entities.Event) error
 	GetEventByMessageID(ctx context.Context, messageID string) (*entities.Event, error)

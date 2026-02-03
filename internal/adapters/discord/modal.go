@@ -2,9 +2,11 @@ package discord
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"strconv"
+	"time"
 
 	"servbot/internal/domain"
 	"servbot/internal/domain/entities"
@@ -15,19 +17,41 @@ import (
 
 func (h *Handler) HandleModalSubmit(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	data := i.ModalSubmitData()
-	title, desc, slotsStr := pkgdiscord.ExtractModalData(data)
+	title, desc, dateStr, timeStr, slotsStr := pkgdiscord.ExtractModalData(data)
+
+	if dateStr == "" || timeStr == "" {
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "❌ Date et heure requises (JJ/MM/AAAA et HH:MM).",
+				Flags:   discordgo.MessageFlagsEphemeral,
+			},
+		})
+		return
+	}
+	scheduledAt, err := pkgdiscord.ParseEventDateTime(dateStr, timeStr)
+	if err != nil {
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "❌ " + err.Error(),
+				Flags:   discordgo.MessageFlagsEphemeral,
+			},
+		})
+		return
+	}
 
 	var slots int
 	if slotsStr == "" || slotsStr == "0" {
 		slots = 0
 	} else {
-		var err error
-		slots, err = strconv.Atoi(slotsStr)
-		if err != nil || slots < 0 {
+		var parseErr error
+		slots, parseErr = strconv.Atoi(slotsStr)
+		if parseErr != nil || slots < 0 {
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
-					Content: "❌ Nombre de places invalide. Veuillez entrer un nombre positif ou laisser vide pour illimité.",
+					Content: "❌ Nombre de places invalide (positif ou vide).",
 					Flags:   discordgo.MessageFlagsEphemeral,
 				},
 			})
@@ -44,28 +68,11 @@ func (h *Handler) HandleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 	})
 
 	user := i.Member.User
-	avatarURL := user.AvatarURL("256")
-	userMention := fmt.Sprintf("<@%s>", user.ID)
 	displayName := user.Username
 	if i.Member.Nick != "" {
 		displayName = i.Member.Nick
 	}
-
-	placesText := "Illimité"
-	if slots > 0 {
-		placesText = fmt.Sprintf("0/%d", slots)
-	}
-
-	embed := &discordgo.MessageEmbed{
-		Title:       "📅 Détails de la sortie",
-		Description: fmt.Sprintf("**Organisé par :** %s\n\n%s\n\n**Places :** %s", userMention, desc, placesText),
-		Color:       0x5865F2,
-		Author: &discordgo.MessageEmbedAuthor{
-			Name:    displayName,
-			IconURL: avatarURL,
-		},
-		Footer: &discordgo.MessageEmbedFooter{Text: "Organisé par " + userMention},
-	}
+	embed := pkgdiscord.BuildNewEventEmbed(user.ID, desc, scheduledAt, slots, displayName, user.AvatarURL("256"))
 
 	btns := []discordgo.MessageComponent{
 		discordgo.ActionsRow{Components: []discordgo.MessageComponent{
@@ -106,6 +113,7 @@ func (h *Handler) HandleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 		Title:       title,
 		Description: desc,
 		MaxSlots:    slots,
+		ScheduledAt: scheduledAt,
 	}
 
 	ctx := context.Background()
@@ -142,6 +150,12 @@ func (h *Handler) HandleEditEvent(s *discordgo.Session, i *discordgo.Interaction
 	if event.MaxSlots > 0 {
 		slotsValue = fmt.Sprintf("%d", event.MaxSlots)
 	}
+	dateValue := ""
+	timeValue := ""
+	if !event.ScheduledAt.IsZero() {
+		dateValue = event.ScheduledAt.Format("02/01/2006")
+		timeValue = event.ScheduledAt.Format("15:04")
+	}
 
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseModal,
@@ -150,13 +164,19 @@ func (h *Handler) HandleEditEvent(s *discordgo.Session, i *discordgo.Interaction
 			Title:    "Modifier la sortie",
 			Components: []discordgo.MessageComponent{
 				discordgo.ActionsRow{Components: []discordgo.MessageComponent{
-					discordgo.TextInput{CustomID: "title", Label: "Titre", Style: discordgo.TextInputShort, Required: true, Value: event.Title, Placeholder: "Resto, Ciné..."},
+					discordgo.TextInput{CustomID: "title", Label: "Titre", Style: discordgo.TextInputShort, Required: true, Value: event.Title, Placeholder: placeholderTitle},
 				}},
 				discordgo.ActionsRow{Components: []discordgo.MessageComponent{
-					discordgo.TextInput{CustomID: "desc", Label: "Détails (Date, Heure, Lieu)", Style: discordgo.TextInputParagraph, Required: true, Value: event.Description},
+					discordgo.TextInput{CustomID: "desc", Label: "Détails (Lieu, etc.)", Style: discordgo.TextInputParagraph, Required: true, Value: event.Description, Placeholder: placeholderDesc},
 				}},
 				discordgo.ActionsRow{Components: []discordgo.MessageComponent{
-					discordgo.TextInput{CustomID: "slots", Label: "Nombre de places (laisser vide pour illimité)", Style: discordgo.TextInputShort, Required: false, Value: slotsValue, Placeholder: "4 ou laisser vide"},
+					discordgo.TextInput{CustomID: "date", Label: "Date", Style: discordgo.TextInputShort, Required: true, Value: dateValue, Placeholder: placeholderDate},
+				}},
+				discordgo.ActionsRow{Components: []discordgo.MessageComponent{
+					discordgo.TextInput{CustomID: "time", Label: "Heure", Style: discordgo.TextInputShort, Required: true, Value: timeValue, Placeholder: placeholderTime},
+				}},
+				discordgo.ActionsRow{Components: []discordgo.MessageComponent{
+					discordgo.TextInput{CustomID: "slots", Label: "Nombre de places", Style: discordgo.TextInputShort, Required: false, Value: slotsValue, Placeholder: placeholderSlots},
 				}},
 			},
 		},
@@ -165,7 +185,24 @@ func (h *Handler) HandleEditEvent(s *discordgo.Session, i *discordgo.Interaction
 
 func (h *Handler) HandleEditModalSubmit(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	data := i.ModalSubmitData()
-	title, desc, slotsStr := pkgdiscord.ExtractModalData(data)
+	title, desc, dateStr, timeStr, slotsStr := pkgdiscord.ExtractModalData(data)
+
+	var scheduledAt time.Time
+	// Modal has Required: true for date/time; guard for legacy/in-flight submissions with empty values.
+	if dateStr != "" && timeStr != "" {
+		var err error
+		scheduledAt, err = pkgdiscord.ParseEventDateTime(dateStr, timeStr)
+		if err != nil {
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: "❌ " + err.Error(),
+					Flags:   discordgo.MessageFlagsEphemeral,
+				},
+			})
+			return
+		}
+	}
 
 	var slots int
 	if slotsStr == "" || slotsStr == "0" {
@@ -177,7 +214,7 @@ func (h *Handler) HandleEditModalSubmit(s *discordgo.Session, i *discordgo.Inter
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
-					Content: "❌ Nombre de places invalide. Veuillez entrer un nombre positif ou laisser vide pour illimité.",
+					Content: "❌ Nombre de places invalide (positif ou vide).",
 					Flags:   discordgo.MessageFlagsEphemeral,
 				},
 			})
@@ -211,9 +248,12 @@ func (h *Handler) HandleEditModalSubmit(s *discordgo.Session, i *discordgo.Inter
 	event.Title = title
 	event.Description = desc
 	event.MaxSlots = slots
+	if !scheduledAt.IsZero() {
+		event.ScheduledAt = scheduledAt
+	}
 
 	if err := h.eventUseCase.UpdateEvent(ctx, event); err != nil {
-		if err == domain.ErrCannotReduceSlots {
+		if errors.Is(err, domain.ErrCannotReduceSlots) {
 			confirmedParticipants, _ := h.eventUseCase.GetConfirmedParticipants(ctx, event.ID)
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
