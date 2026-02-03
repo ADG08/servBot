@@ -1,9 +1,21 @@
 package database
 
 import (
+	"time"
+
+	"github.com/jackc/pgx/v5/pgtype"
+
 	"servbot/internal/domain/entities"
 	"servbot/internal/infrastructure/database/sqlc_generated"
 )
+
+// pgtypeTimestamptzToTime returns t.Time when Valid, else zero time.
+func pgtypeTimestamptzToTime(t pgtype.Timestamptz) time.Time {
+	if !t.Valid {
+		return time.Time{}
+	}
+	return t.Time
+}
 
 func eventToDomain(e sqlc_generated.Event) entities.Event {
 	return entities.Event{
@@ -14,8 +26,9 @@ func eventToDomain(e sqlc_generated.Event) entities.Event {
 		Title:       e.Title,
 		Description: e.Description,
 		MaxSlots:    int(e.MaxSlots),
-		CreatedAt:   e.CreatedAt,
-		UpdatedAt:   e.UpdatedAt,
+		ScheduledAt: pgtypeTimestamptzToTime(e.ScheduledAt),
+		CreatedAt:   pgtypeTimestamptzToTime(e.CreatedAt),
+		UpdatedAt:   pgtypeTimestamptzToTime(e.UpdatedAt),
 	}
 }
 
@@ -26,8 +39,8 @@ func participantToDomain(p sqlc_generated.Participant) entities.Participant {
 		UserID:    p.UserID,
 		Username:  p.Username,
 		Status:    p.Status,
-		JoinedAt:  p.JoinedAt,
-		CreatedAt: p.CreatedAt,
-		UpdatedAt: p.UpdatedAt,
+		JoinedAt:  pgtypeTimestamptzToTime(p.JoinedAt),
+		CreatedAt: pgtypeTimestamptzToTime(p.CreatedAt),
+		UpdatedAt: pgtypeTimestamptzToTime(p.UpdatedAt),
 	}
 }

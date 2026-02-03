@@ -6,6 +6,7 @@ CREATE TABLE events (
     title TEXT NOT NULL,
     description TEXT NOT NULL,
     max_slots INT NOT NULL DEFAULT 0,
+    scheduled_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

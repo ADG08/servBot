@@ -1,6 +1,6 @@
 -- name: CreateEvent :one
-INSERT INTO events (message_id, channel_id, creator_id, title, description, max_slots)
-VALUES ($1, $2, $3, $4, $5, $6)
+INSERT INTO events (message_id, channel_id, creator_id, title, description, max_slots, scheduled_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 RETURNING *;
 
 -- name: GetEventByMessageID :one
@@ -17,6 +17,7 @@ UPDATE events SET
     title = $2,
     description = $3,
     max_slots = $4,
+    scheduled_at = $5,
     updated_at = NOW()
 WHERE id = $1;
 

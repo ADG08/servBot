@@ -11,6 +11,7 @@ type Event struct {
 	Title        string
 	Description  string
 	MaxSlots     int
+	ScheduledAt  time.Time // zero = not set (for backward compat)
 	Participants []Participant
 	CreatedAt    time.Time
 	UpdatedAt    time.Time

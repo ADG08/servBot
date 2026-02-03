@@ -3,65 +3,82 @@ package discord
 import (
 	"fmt"
 	"strings"
+	"time"
 
-	"github.com/bwmarrin/discordgo"
 	"servbot/internal/domain"
 	"servbot/internal/domain/entities"
+
+	"github.com/bwmarrin/discordgo"
 )
 
-const maxDisplayed = 10
+const (
+	embedColor   = 0x5865F2
+	embedTitle   = "📅 Détails de la sortie"
+	maxDisplayed = 10
+)
 
-// BuildEventEmbed builds an embed for an event.
-func BuildEventEmbed(event *entities.Event, desc string) *discordgo.MessageEmbed {
-	userMention := fmt.Sprintf("<@%s>", event.CreatorID)
-	placesText := "Illimité"
-	if event.MaxSlots > 0 {
-		placesText = fmt.Sprintf("0/%d", event.MaxSlots)
+func formatPlaces(maxSlots, confirmedCount int) string {
+	if maxSlots == 0 {
+		return fmt.Sprintf("%d (Illimité)", confirmedCount)
 	}
+	return fmt.Sprintf("%d/%d", confirmedCount, maxSlots)
+}
+
+func buildDescriptionBase(organizerMention, description string, scheduledAt time.Time, placesText string) string {
+	var b strings.Builder
+	b.WriteString(fmt.Sprintf("**Organisé par :** %s\n\n", organizerMention))
+	b.WriteString(description)
+	if !scheduledAt.IsZero() {
+		b.WriteString(fmt.Sprintf("\n\n**Quand :** %s", FormatEventDateTime(scheduledAt)))
+	}
+	b.WriteString(fmt.Sprintf("\n\n**Places :** %s", placesText))
+	return b.String()
+}
+
+func BuildNewEventEmbed(creatorID, description string, scheduledAt time.Time, slots int, displayName, avatarURL string) *discordgo.MessageEmbed {
+	userMention := fmt.Sprintf("<@%s>", creatorID)
+	placesText := formatPlaces(slots, 0)
+	desc := buildDescriptionBase(userMention, description, scheduledAt, placesText)
 	return &discordgo.MessageEmbed{
-		Title:       "📅 Détails de la sortie",
-		Description: fmt.Sprintf("**Organisé par :** %s\n\n%s\n\n**Places :** %s", userMention, desc, placesText),
-		Color:       0x5865F2,
+		Title:       embedTitle,
+		Description: desc,
+		Color:       embedColor,
+		Author:      &discordgo.MessageEmbedAuthor{Name: displayName, IconURL: avatarURL},
+		Footer:      &discordgo.MessageEmbedFooter{Text: "Organisé par " + userMention},
 	}
 }
 
-// UpdateEventEmbed updates an embed with event and participant data.
 func UpdateEventEmbed(embed *discordgo.MessageEmbed, event *entities.Event, confirmed, waitlist []string) {
 	organizerMention := fmt.Sprintf("<@%s>", event.CreatorID)
-	var descBuilder strings.Builder
-	descBuilder.WriteString(fmt.Sprintf("**Organisé par :** %s\n\n", organizerMention))
-	descBuilder.WriteString(event.Description)
-	placesText := fmt.Sprintf("%d/%d", len(confirmed), event.MaxSlots)
-	if event.MaxSlots == 0 {
-		placesText = fmt.Sprintf("%d (Illimité)", len(confirmed))
-	}
-	descBuilder.WriteString(fmt.Sprintf("\n\n**Places :** %s", placesText))
+	placesText := formatPlaces(event.MaxSlots, len(confirmed))
+	desc := buildDescriptionBase(organizerMention, event.Description, event.ScheduledAt, placesText)
+	var b strings.Builder
+	b.WriteString(desc)
 	if len(confirmed) > 0 {
-		descBuilder.WriteString("\n\n✅ **Participants :**\n")
+		b.WriteString("\n\n✅ **Participants :**\n")
 		displayCount := len(confirmed)
 		if displayCount > maxDisplayed {
 			displayCount = maxDisplayed
 		}
-		descBuilder.WriteString(strings.Join(confirmed[:displayCount], "\n"))
+		b.WriteString(strings.Join(confirmed[:displayCount], "\n"))
 		if len(confirmed) > maxDisplayed {
-			descBuilder.WriteString(fmt.Sprintf("\n*... et %d autre(s)*", len(confirmed)-maxDisplayed))
+			b.WriteString(fmt.Sprintf("\n*... et %d autre(s)*", len(confirmed)-maxDisplayed))
 		}
 	}
 	if len(waitlist) > 0 {
-		descBuilder.WriteString("\n\n⏳ **Liste d'attente :**\n")
+		b.WriteString("\n\n⏳ **Liste d'attente :**\n")
 		displayCount := len(waitlist)
 		if displayCount > maxDisplayed {
 			displayCount = maxDisplayed
 		}
-		descBuilder.WriteString(strings.Join(waitlist[:displayCount], "\n"))
+		b.WriteString(strings.Join(waitlist[:displayCount], "\n"))
 		if len(waitlist) > maxDisplayed {
-			descBuilder.WriteString(fmt.Sprintf("\n*... et %d autre(s)*", len(waitlist)-maxDisplayed))
+			b.WriteString(fmt.Sprintf("\n*... et %d autre(s)*", len(waitlist)-maxDisplayed))
 		}
 	}
-	embed.Description = descBuilder.String()
+	embed.Description = b.String()
 }
 
-// FormatParticipants splits participants into confirmed and waitlist mention strings.
 func FormatParticipants(participants []entities.Participant) (confirmed, waitlist []string) {
 	confirmed = make([]string, 0, len(participants))
 	waitlist = make([]string, 0, len(participants))

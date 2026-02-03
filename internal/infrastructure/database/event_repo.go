@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/jackc/pgx/v5/pgtype"
+
 	"servbot/internal/domain/entities"
 	"servbot/internal/infrastructure/database/sqlc_generated"
 	"servbot/internal/ports/output"
@@ -22,6 +24,10 @@ func NewEventRepository(pool *sqlc_generated.Queries) *EventRepository {
 }
 
 func (r *EventRepository) Create(ctx context.Context, event *entities.Event) error {
+	var scheduledAt pgtype.Timestamptz
+	if !event.ScheduledAt.IsZero() {
+		scheduledAt = pgtype.Timestamptz{Time: event.ScheduledAt, Valid: true}
+	}
 	row, err := r.q.CreateEvent(ctx, sqlc_generated.CreateEventParams{
 		MessageID:   event.MessageID,
 		ChannelID:   event.ChannelID,
@@ -29,13 +35,14 @@ func (r *EventRepository) Create(ctx context.Context, event *entities.Event) err
 		Title:       event.Title,
 		Description: event.Description,
 		MaxSlots:    int32(event.MaxSlots),
+		ScheduledAt: scheduledAt,
 	})
 	if err != nil {
 		return fmt.Errorf("create event: %w", err)
 	}
 	event.ID = uint(row.ID)
-	event.CreatedAt = row.CreatedAt
-	event.UpdatedAt = row.UpdatedAt
+	event.CreatedAt = pgtypeTimestamptzToTime(row.CreatedAt)
+	event.UpdatedAt = pgtypeTimestamptzToTime(row.UpdatedAt)
 	return nil
 }
 
@@ -88,11 +95,16 @@ func (r *EventRepository) FindByCreatorID(ctx context.Context, creatorID string)
 }
 
 func (r *EventRepository) Update(ctx context.Context, event *entities.Event) error {
+	var scheduledAt pgtype.Timestamptz
+	if !event.ScheduledAt.IsZero() {
+		scheduledAt = pgtype.Timestamptz{Time: event.ScheduledAt, Valid: true}
+	}
 	err := r.q.UpdateEvent(ctx, sqlc_generated.UpdateEventParams{
 		ID:          int64(event.ID),
 		Title:       event.Title,
 		Description: event.Description,
 		MaxSlots:    int32(event.MaxSlots),
+		ScheduledAt: scheduledAt,
 	})
 	if err != nil {
 		return fmt.Errorf("update event: %w", err)
