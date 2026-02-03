@@ -7,6 +7,8 @@ CREATE TABLE events (
     description TEXT NOT NULL,
     max_slots INT NOT NULL DEFAULT 0,
     scheduled_at TIMESTAMPTZ,
+    private_channel_id TEXT NOT NULL DEFAULT '',
+    questions_thread_id TEXT NOT NULL DEFAULT '',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

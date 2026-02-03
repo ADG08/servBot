@@ -27,13 +27,15 @@ func (r *EventRepository) Create(ctx context.Context, event *entities.Event) err
 		scheduledAt = pgtype.Timestamptz{Time: event.ScheduledAt, Valid: true}
 	}
 	row, err := r.q.CreateEvent(ctx, sqlc_generated.CreateEventParams{
-		MessageID:   event.MessageID,
-		ChannelID:   event.ChannelID,
-		CreatorID:   event.CreatorID,
-		Title:       event.Title,
-		Description: event.Description,
-		MaxSlots:    int32(event.MaxSlots),
-		ScheduledAt: scheduledAt,
+		MessageID:         event.MessageID,
+		ChannelID:         event.ChannelID,
+		CreatorID:         event.CreatorID,
+		Title:             event.Title,
+		Description:       event.Description,
+		MaxSlots:          int32(event.MaxSlots),
+		ScheduledAt:       scheduledAt,
+		PrivateChannelID:  event.PrivateChannelID,
+		QuestionsThreadID: event.QuestionsThreadID,
 	})
 	if err != nil {
 		return fmt.Errorf("create event: %w", err)
