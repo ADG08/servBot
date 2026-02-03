@@ -13,12 +13,10 @@ import (
 
 var _ output.ParticipantRepository = (*ParticipantRepository)(nil)
 
-// ParticipantRepository implements output.ParticipantRepository using sqlc + pgx.
 type ParticipantRepository struct {
 	q *sqlc_generated.Queries
 }
 
-// NewParticipantRepository creates a ParticipantRepository.
 func NewParticipantRepository(q *sqlc_generated.Queries) *ParticipantRepository {
 	return &ParticipantRepository{q: q}
 }

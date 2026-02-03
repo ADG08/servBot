@@ -56,10 +56,7 @@ func UpdateEventEmbed(embed *discordgo.MessageEmbed, event *entities.Event, conf
 	b.WriteString(desc)
 	if len(confirmed) > 0 {
 		b.WriteString("\n\n✅ **Participants :**\n")
-		displayCount := len(confirmed)
-		if displayCount > maxDisplayed {
-			displayCount = maxDisplayed
-		}
+		displayCount := min(len(confirmed), maxDisplayed)
 		b.WriteString(strings.Join(confirmed[:displayCount], "\n"))
 		if len(confirmed) > maxDisplayed {
 			b.WriteString(fmt.Sprintf("\n*... et %d autre(s)*", len(confirmed)-maxDisplayed))
@@ -67,10 +64,7 @@ func UpdateEventEmbed(embed *discordgo.MessageEmbed, event *entities.Event, conf
 	}
 	if len(waitlist) > 0 {
 		b.WriteString("\n\n⏳ **Liste d'attente :**\n")
-		displayCount := len(waitlist)
-		if displayCount > maxDisplayed {
-			displayCount = maxDisplayed
-		}
+		displayCount := min(len(waitlist), maxDisplayed)
 		b.WriteString(strings.Join(waitlist[:displayCount], "\n"))
 		if len(waitlist) > maxDisplayed {
 			b.WriteString(fmt.Sprintf("\n*... et %d autre(s)*", len(waitlist)-maxDisplayed))

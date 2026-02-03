@@ -2,6 +2,7 @@ package discord
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"strconv"
@@ -239,7 +240,7 @@ func (h *Handler) HandleEditModalSubmit(s *discordgo.Session, i *discordgo.Inter
 	event.ScheduledAt = scheduledAt
 
 	if err := h.eventUseCase.UpdateEvent(ctx, event); err != nil {
-		if err == domain.ErrCannotReduceSlots {
+		if errors.Is(err, domain.ErrCannotReduceSlots) {
 			confirmedParticipants, _ := h.eventUseCase.GetConfirmedParticipants(ctx, event.ID)
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,

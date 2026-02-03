@@ -10,13 +10,11 @@ import (
 	"servbot/internal/ports/output"
 )
 
-// ParticipantService implements input.ParticipantUseCase.
 type ParticipantService struct {
 	participantRepo output.ParticipantRepository
 	eventRepo       output.EventRepository
 }
 
-// NewParticipantService creates a ParticipantService.
 func NewParticipantService(
 	participantRepo output.ParticipantRepository,
 	eventRepo output.EventRepository,

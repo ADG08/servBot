@@ -15,14 +15,13 @@ import (
 	"servbot/internal/ports/output"
 )
 
-// Bot is the Discord adapter.
 type Bot struct {
 	session *discordgo.Session
 	config  *config.Config
 	handler *Handler
 }
 
-// NewBot creates a Bot and wires ports: output adapters -> application (use cases) -> handler.
+// NewBot wires output adapters, application services, and handler (composition root).
 func NewBot(cfg *config.Config, eventRepo output.EventRepository, participantRepo output.ParticipantRepository) *Bot {
 	eventUC := application.NewEventService(eventRepo, participantRepo)
 	participantUC := application.NewParticipantService(participantRepo, eventRepo)
@@ -88,7 +87,6 @@ func (b *Bot) handleInteraction(s *discordgo.Session, i *discordgo.InteractionCr
 	}
 }
 
-// Start runs the bot until interrupted.
 func (b *Bot) Start() error {
 	if err := b.session.Open(); err != nil {
 		return fmt.Errorf("erreur lors de l'ouverture de la session: %w", err)

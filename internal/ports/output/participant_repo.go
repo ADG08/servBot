@@ -6,7 +6,6 @@ import (
 	"servbot/internal/domain/entities"
 )
 
-// ParticipantRepository defines persistence for participants (output port).
 type ParticipantRepository interface {
 	Create(ctx context.Context, participant *entities.Participant) error
 	FindByID(ctx context.Context, id uint) (*entities.Participant, error)

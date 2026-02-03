@@ -24,6 +24,7 @@ You are an expert Go developer. Follow these rules strictly to maintain a modern
     - Use centralized errors in `internal/domain/errors`.
     - Wrap errors with context using `fmt.Errorf("context: %w", err)`.
 - **Context**: Always pass `context.Context` as the first argument in database and service methods.
+- **Standard library first**: Do not reinvent the wheel. Prefer `stdlib` (e.g. `strings.TrimSpace`, `time.Parse`, `encoding/json`) or well-established packages over custom implementations. Only add custom logic when the standard library does not cover the need.
 
 ## 3. Database Layer (sqlc + pgx)
 - **sqlc**: Never manually edit code in `internal/infrastructure/database/sqlc_generated/` (or your sqlc output folder). 

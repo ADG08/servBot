@@ -13,12 +13,10 @@ import (
 
 var _ output.EventRepository = (*EventRepository)(nil)
 
-// EventRepository implements output.EventRepository using sqlc + pgx.
 type EventRepository struct {
 	q *sqlc_generated.Queries
 }
 
-// NewEventRepository creates an EventRepository.
 func NewEventRepository(pool *sqlc_generated.Queries) *EventRepository {
 	return &EventRepository{q: pool}
 }

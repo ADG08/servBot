@@ -2,19 +2,18 @@ package application
 
 import (
 	"context"
+	"fmt"
 
 	"servbot/internal/domain"
 	"servbot/internal/domain/entities"
 	"servbot/internal/ports/output"
 )
 
-// EventService implements input.EventUseCase (application / use case).
 type EventService struct {
 	eventRepo       output.EventRepository
 	participantRepo output.ParticipantRepository
 }
 
-// NewEventService creates an EventService.
 func NewEventService(
 	eventRepo output.EventRepository,
 	participantRepo output.ParticipantRepository,
@@ -40,7 +39,7 @@ func (s *EventService) GetEventByID(ctx context.Context, id uint) (*entities.Eve
 func (s *EventService) UpdateEvent(ctx context.Context, event *entities.Event) error {
 	confirmedCount, err := s.participantRepo.CountByEventIDAndStatus(ctx, event.ID, domain.StatusConfirmed)
 	if err != nil {
-		return err
+		return fmt.Errorf("count confirmed: %w", err)
 	}
 	if event.MaxSlots > 0 && int(confirmedCount) > event.MaxSlots {
 		return domain.ErrCannotReduceSlots
