@@ -44,7 +44,7 @@ func ParseEventDateTime(dateStr, timeStr string) (time.Time, error) {
 	dt := time.Date(tDate.Year(), tDate.Month(), tDate.Day(),
 		tTime.Hour(), tTime.Minute(), 0, 0, loc)
 	// Grace period to avoid rejecting times that became "past" due to processing delay.
-	now := time.Now()
+	now := time.Now().In(loc)
 	if dt.Before(now.Add(-time.Minute)) {
 		return time.Time{}, domain.ErrDateTimeInPast
 	}
@@ -55,5 +55,9 @@ func FormatEventDateTime(t time.Time) string {
 	if t.IsZero() {
 		return ""
 	}
-	return t.Format("02/01/2006 à 15:04")
+	loc, err := parisLocation()
+	if err != nil {
+		return t.Format("02/01/2006 à 15:04")
+	}
+	return t.In(loc).Format("02/01/2006 à 15:04 MST")
 }

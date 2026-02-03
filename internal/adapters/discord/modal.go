@@ -19,6 +19,16 @@ func (h *Handler) HandleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 	data := i.ModalSubmitData()
 	title, desc, dateStr, timeStr, slotsStr := pkgdiscord.ExtractModalData(data)
 
+	if dateStr == "" || timeStr == "" {
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "❌ Date et heure requises (JJ/MM/AAAA et HH:MM).",
+				Flags:   discordgo.MessageFlagsEphemeral,
+			},
+		})
+		return
+	}
 	scheduledAt, err := pkgdiscord.ParseEventDateTime(dateStr, timeStr)
 	if err != nil {
 		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -178,6 +188,7 @@ func (h *Handler) HandleEditModalSubmit(s *discordgo.Session, i *discordgo.Inter
 	title, desc, dateStr, timeStr, slotsStr := pkgdiscord.ExtractModalData(data)
 
 	var scheduledAt time.Time
+	// Modal has Required: true for date/time; guard for legacy/in-flight submissions with empty values.
 	if dateStr != "" && timeStr != "" {
 		var err error
 		scheduledAt, err = pkgdiscord.ParseEventDateTime(dateStr, timeStr)
@@ -237,7 +248,9 @@ func (h *Handler) HandleEditModalSubmit(s *discordgo.Session, i *discordgo.Inter
 	event.Title = title
 	event.Description = desc
 	event.MaxSlots = slots
-	event.ScheduledAt = scheduledAt
+	if !scheduledAt.IsZero() {
+		event.ScheduledAt = scheduledAt
+	}
 
 	if err := h.eventUseCase.UpdateEvent(ctx, event); err != nil {
 		if errors.Is(err, domain.ErrCannotReduceSlots) {
