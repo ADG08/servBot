@@ -7,7 +7,7 @@ import (
 )
 
 type EventUseCase interface {
-	CreateEvent(ctx context.Context, event *entities.Event) error
+	CreateEvent(ctx context.Context, event *entities.Event, creatorUsername string) error
 	GetEventByMessageID(ctx context.Context, messageID string) (*entities.Event, error)
 	GetEventByID(ctx context.Context, id uint) (*entities.Event, error)
 	UpdateEvent(ctx context.Context, event *entities.Event) error

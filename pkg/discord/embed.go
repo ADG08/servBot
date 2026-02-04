@@ -35,10 +35,14 @@ func buildDescriptionBase(organizerMention, description string, scheduledAt time
 	return b.String()
 }
 
+// BuildNewEventEmbed builds the initial post embed with the organizer
+// already counted as a confirmed participant (e.g. 1/4) and listed
+// in the participants section.
 func BuildNewEventEmbed(creatorID, description string, scheduledAt time.Time, slots int, displayName, avatarURL string) *discordgo.MessageEmbed {
 	userMention := fmt.Sprintf("<@%s>", creatorID)
-	placesText := formatPlaces(slots, 0)
+	placesText := formatPlaces(slots, 1)
 	desc := buildDescriptionBase(userMention, description, scheduledAt, placesText)
+	desc += "\n\n✅ **Participants :**\n- " + userMention
 	return &discordgo.MessageEmbed{
 		Title:       embedTitle,
 		Description: desc,
