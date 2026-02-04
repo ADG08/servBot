@@ -50,8 +50,11 @@ func (b *Bot) handleInteraction(s *discordgo.Session, i *discordgo.InteractionCr
 	switch i.Type {
 	case discordgo.InteractionApplicationCommand:
 		cmdData := i.ApplicationCommandData()
-		if cmdData.Name == "sortie" {
+		switch cmdData.Name {
+		case "sortie":
 			b.handler.HandleCommand(s, i)
+		case "sortie-template":
+			b.handler.HandleTemplateCommand(s, i)
 		}
 	case discordgo.InteractionModalSubmit:
 		modalData := i.ModalSubmitData()
@@ -91,13 +94,52 @@ func (b *Bot) Start() error {
 	}
 	defer b.session.Close()
 
-	commands := []*discordgo.ApplicationCommand{
-		{Name: "sortie", Description: "Créer une nouvelle sortie"},
+	appID := b.session.State.User.ID
+
+	// On nettoie d'abord toutes les anciennes commandes pour éviter les doublons.
+	// 1) Globales
+	if existing, err := b.session.ApplicationCommands(appID, ""); err != nil {
+		log.Printf("⚠️ Erreur lors de la récupération des commandes globales: %v", err)
+	} else {
+		for _, cmd := range existing {
+			if err := b.session.ApplicationCommandDelete(appID, "", cmd.ID); err != nil {
+				log.Printf("⚠️ Erreur lors de la suppression de la commande globale %s: %v", cmd.Name, err)
+			}
+		}
 	}
 
+	// 2) De guilde (si GUILD_ID est configuré)
+	targetGuildID := b.config.GuildID
+	if targetGuildID != "" {
+		if existing, err := b.session.ApplicationCommands(appID, targetGuildID); err != nil {
+			log.Printf("⚠️ Erreur lors de la récupération des commandes de guilde: %v", err)
+		} else {
+			for _, cmd := range existing {
+				if err := b.session.ApplicationCommandDelete(appID, targetGuildID, cmd.ID); err != nil {
+					log.Printf("⚠️ Erreur lors de la suppression de la commande de guilde %s: %v", cmd.Name, err)
+				}
+			}
+		}
+	}
+
+	commands := []*discordgo.ApplicationCommand{
+		{Name: "sortie", Description: "Créer une nouvelle sortie"},
+		{
+			Name:        "sortie-template",
+			Description: "Ouvrir le formulaire de sortie pré-rempli pour le debug",
+		},
+	}
+
+	// Si GUILD_ID est défini, on enregistre les commandes au niveau du serveur
+	// pour qu'elles soient disponibles immédiatement (pratique pour le debug).
+	// Sinon, fallback sur des commandes globales (peuvent prendre plusieurs minutes).
 	for _, cmd := range commands {
-		if _, err := b.session.ApplicationCommandCreate(b.session.State.User.ID, "", cmd); err != nil {
-			log.Printf("⚠️ Erreur lors de l'enregistrement de la commande %s: %v", cmd.Name, err)
+		if _, err := b.session.ApplicationCommandCreate(appID, targetGuildID, cmd); err != nil {
+			scope := "global"
+			if targetGuildID != "" {
+				scope = "guild"
+			}
+			log.Printf("⚠️ Erreur lors de l'enregistrement de la commande %s (%s): %v", cmd.Name, scope, err)
 		}
 	}
 

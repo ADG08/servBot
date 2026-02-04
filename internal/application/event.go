@@ -3,6 +3,8 @@ package application
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
 
 	"servbot/internal/domain"
 	"servbot/internal/domain/entities"
@@ -24,8 +26,22 @@ func NewEventService(
 	}
 }
 
-func (s *EventService) CreateEvent(ctx context.Context, event *entities.Event) error {
-	return s.eventRepo.Create(ctx, event)
+func (s *EventService) CreateEvent(ctx context.Context, event *entities.Event, creatorUsername string) error {
+	if err := s.eventRepo.Create(ctx, event); err != nil {
+		return err
+	}
+	username := strings.TrimSpace(creatorUsername)
+	if username == "" {
+		username = event.CreatorID
+	}
+	organizer := &entities.Participant{
+		EventID:  event.ID,
+		UserID:   event.CreatorID,
+		Username: username,
+		Status:   domain.StatusConfirmed,
+		JoinedAt: time.Now(),
+	}
+	return s.participantRepo.Create(ctx, organizer)
 }
 
 func (s *EventService) GetEventByMessageID(ctx context.Context, messageID string) (*entities.Event, error) {

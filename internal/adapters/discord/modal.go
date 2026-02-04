@@ -166,7 +166,7 @@ func (h *Handler) HandleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 	}
 
 	ctx := context.Background()
-	if err := h.eventUseCase.CreateEvent(ctx, event); err != nil {
+	if err := h.eventUseCase.CreateEvent(ctx, event, displayName); err != nil {
 		log.Printf("❌ Erreur lors de la sauvegarde de l'événement: %v", err)
 		s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
 			Content: "❌ Erreur lors de la sauvegarde de l'événement.",
