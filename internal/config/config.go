@@ -11,6 +11,7 @@ type Config struct {
 	Token          string
 	ForumChannelID string
 	DatabaseURL    string
+	GuildID        string
 }
 
 func Load() *Config {
@@ -28,6 +29,8 @@ func Load() *Config {
 		forumChannelID = "1464818337388167389"
 	}
 
+	guildID := os.Getenv("GUILD_ID")
+
 	databaseURL := os.Getenv("DATABASE_URL")
 	if databaseURL == "" {
 		databaseURL = "postgres://localhost:5432/servbot?sslmode=disable"
@@ -37,5 +40,6 @@ func Load() *Config {
 		Token:          token,
 		ForumChannelID: forumChannelID,
 		DatabaseURL:    databaseURL,
+		GuildID:        guildID,
 	}
 }
