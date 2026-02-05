@@ -12,9 +12,8 @@ import (
 )
 
 const (
-	embedColor   = 0x5865F2
-	embedTitle   = "📅 Détails de la sortie"
-	maxDisplayed = 10
+	embedColor = 0x5865F2
+	embedTitle = "📅 Détails de la sortie"
 )
 
 func formatPlaces(maxSlots, confirmedCount int) string {
@@ -24,7 +23,7 @@ func formatPlaces(maxSlots, confirmedCount int) string {
 	return fmt.Sprintf("%d/%d", confirmedCount, maxSlots)
 }
 
-func buildDescriptionBase(organizerMention, description string, scheduledAt time.Time, placesText string) string {
+func buildDescriptionBase(organizerMention, description string, scheduledAt time.Time, placesText string, waitlistCount int) string {
 	var b strings.Builder
 	b.WriteString(fmt.Sprintf("**Organisé par :** %s\n\n", organizerMention))
 	b.WriteString(description)
@@ -32,49 +31,32 @@ func buildDescriptionBase(organizerMention, description string, scheduledAt time
 		b.WriteString(fmt.Sprintf("\n\n**Quand :** %s", FormatEventDateTime(scheduledAt)))
 	}
 	b.WriteString(fmt.Sprintf("\n\n**Places :** %s", placesText))
+	if waitlistCount > 0 {
+		b.WriteString(fmt.Sprintf(" • %d en attente", waitlistCount))
+	}
 	return b.String()
 }
 
 // BuildNewEventEmbed builds the initial post embed with the organizer
-// already counted as a confirmed participant (e.g. 1/4) and listed
-// in the participants section.
+// already counted as a confirmed participant. Only counters are shown (no public list).
 func BuildNewEventEmbed(creatorID, description string, scheduledAt time.Time, slots int, displayName, avatarURL string) *discordgo.MessageEmbed {
 	userMention := fmt.Sprintf("<@%s>", creatorID)
 	placesText := formatPlaces(slots, 1)
-	desc := buildDescriptionBase(userMention, description, scheduledAt, placesText)
-	desc += "\n\n✅ **Participants :**\n- " + userMention
+	desc := buildDescriptionBase(userMention, description, scheduledAt, placesText, 0)
 	return &discordgo.MessageEmbed{
 		Title:       embedTitle,
 		Description: desc,
 		Color:       embedColor,
 		Author:      &discordgo.MessageEmbedAuthor{Name: displayName, IconURL: avatarURL},
-		Footer:      &discordgo.MessageEmbedFooter{Text: "Organisé par " + userMention},
+		Footer:      &discordgo.MessageEmbedFooter{Text: "Réagis avec ✅ pour t'inscrire"},
 	}
 }
 
-func UpdateEventEmbed(embed *discordgo.MessageEmbed, event *entities.Event, confirmed, waitlist []string) {
+// UpdateEventEmbed updates the embed with confirmed/waitlist counts only (no public participant list).
+func UpdateEventEmbed(embed *discordgo.MessageEmbed, event *entities.Event, confirmedCount, waitlistCount int) {
 	organizerMention := fmt.Sprintf("<@%s>", event.CreatorID)
-	placesText := formatPlaces(event.MaxSlots, len(confirmed))
-	desc := buildDescriptionBase(organizerMention, event.Description, event.ScheduledAt, placesText)
-	var b strings.Builder
-	b.WriteString(desc)
-	if len(confirmed) > 0 {
-		b.WriteString("\n\n✅ **Participants :**\n")
-		displayCount := min(len(confirmed), maxDisplayed)
-		b.WriteString(strings.Join(confirmed[:displayCount], "\n"))
-		if len(confirmed) > maxDisplayed {
-			b.WriteString(fmt.Sprintf("\n*... et %d autre(s)*", len(confirmed)-maxDisplayed))
-		}
-	}
-	if len(waitlist) > 0 {
-		b.WriteString("\n\n⏳ **Liste d'attente :**\n")
-		displayCount := min(len(waitlist), maxDisplayed)
-		b.WriteString(strings.Join(waitlist[:displayCount], "\n"))
-		if len(waitlist) > maxDisplayed {
-			b.WriteString(fmt.Sprintf("\n*... et %d autre(s)*", len(waitlist)-maxDisplayed))
-		}
-	}
-	embed.Description = b.String()
+	placesText := formatPlaces(event.MaxSlots, confirmedCount)
+	embed.Description = buildDescriptionBase(organizerMention, event.Description, event.ScheduledAt, placesText, waitlistCount)
 }
 
 func FormatParticipants(participants []entities.Participant) (confirmed, waitlist []string) {

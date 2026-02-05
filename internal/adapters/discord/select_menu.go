@@ -12,39 +12,33 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
+func parseParticipantID(value, prefix string) (uint, bool) {
+	idStr, ok := strings.CutPrefix(value, prefix)
+	if !ok {
+		return 0, false
+	}
+	id, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		return 0, false
+	}
+	return uint(id), true
+}
+
 func (h *Handler) HandleManageWaitlist(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	ctx := context.Background()
 	event, err := h.eventUseCase.GetEventByMessageID(ctx, i.Message.ID)
 	if err != nil {
-		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "❌ Événement non trouvé.",
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
-		})
+		respondEphemeral(s, i.Interaction, "❌ Événement non trouvé.")
 		return
 	}
 	if i.Member.User.ID != event.CreatorID {
-		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "❌ Seul l'organisateur peut gérer la liste d'attente.",
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
-		})
+		respondEphemeral(s, i.Interaction, "❌ Seul l'organisateur peut gérer la liste d'attente.")
 		return
 	}
 
 	waitlistParticipants, err := h.eventUseCase.GetWaitlistParticipants(ctx, event.ID)
 	if err != nil || len(waitlistParticipants) == 0 {
-		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "ℹ️ Il n'y a personne en liste d'attente.",
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
-		})
+		respondEphemeral(s, i.Interaction, "ℹ️ Il n'y a personne en liste d'attente.")
 		return
 	}
 
@@ -82,80 +76,42 @@ func (h *Handler) HandlePromote(s *discordgo.Session, i *discordgo.InteractionCr
 	if len(data.Values) == 0 {
 		return
 	}
-	selectedValue := data.Values[0]
-	idStr, ok := strings.CutPrefix(selectedValue, "promote_")
+	participantID, ok := parseParticipantID(data.Values[0], "promote_")
 	if !ok {
 		return
 	}
-	participantID, err := strconv.ParseUint(idStr, 10, 32)
-	if err != nil {
-		return
-	}
 
-	participant, err := h.participantUseCase.PromoteParticipant(ctx, uint(participantID), i.Member.User.ID)
+	participant, err := h.participantUseCase.PromoteParticipant(ctx, participantID, i.Member.User.ID)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotOrganizer) {
-			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Content: "❌ Seul l'organisateur peut promouvoir des participants.",
-					Flags:   discordgo.MessageFlagsEphemeral,
-				},
-			})
+			respondEphemeral(s, i.Interaction, "❌ Seul l'organisateur peut promouvoir des participants.")
 		}
 		return
 	}
 
 	event, _ := h.eventUseCase.GetEventByID(ctx, participant.EventID)
-	ch, _ := s.UserChannelCreate(participant.UserID)
-	if ch != nil && event != nil {
-		s.ChannelMessageSend(ch.ID, fmt.Sprintf("🎉 **Bonne nouvelle !** Tu as été promu pour **%s** par l'organisateur !", event.Title))
-	}
 	if event != nil {
+		sendDM(s, participant.UserID, fmt.Sprintf("🎉 **Bonne nouvelle !** Tu as été promu pour **%s** par l'organisateur !", event.Title))
 		h.updateEmbed(ctx, s, event.ChannelID, event.MessageID)
 	}
-	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: fmt.Sprintf("✅ %s a été promu de la liste d'attente !", participant.Username),
-			Flags:   discordgo.MessageFlagsEphemeral,
-		},
-	})
+	respondEphemeral(s, i.Interaction, fmt.Sprintf("✅ %s a été promu de la liste d'attente !", participant.Username))
 }
 
 func (h *Handler) HandleRemoveParticipant(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	ctx := context.Background()
 	event, err := h.eventUseCase.GetEventByMessageID(ctx, i.Message.ID)
 	if err != nil {
-		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "❌ Événement non trouvé.",
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
-		})
+		respondEphemeral(s, i.Interaction, "❌ Événement non trouvé.")
 		return
 	}
 	if i.Member.User.ID != event.CreatorID {
-		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "❌ Seul l'organisateur peut retirer des participants.",
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
-		})
+		respondEphemeral(s, i.Interaction, "❌ Seul l'organisateur peut retirer des participants.")
 		return
 	}
 
 	confirmedParticipants, err := h.eventUseCase.GetConfirmedParticipants(ctx, event.ID)
 	if err != nil || len(confirmedParticipants) == 0 {
-		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "ℹ️ Il n'y a aucun participant confirmé à retirer.",
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
-		})
+		respondEphemeral(s, i.Interaction, "ℹ️ Il n'y a aucun participant confirmé à retirer.")
 		return
 	}
 
@@ -193,26 +149,15 @@ func (h *Handler) HandleRemove(s *discordgo.Session, i *discordgo.InteractionCre
 	if len(data.Values) == 0 {
 		return
 	}
-	selectedValue := data.Values[0]
-	idStr, ok := strings.CutPrefix(selectedValue, "remove_")
+	participantID, ok := parseParticipantID(data.Values[0], "remove_")
 	if !ok {
 		return
 	}
-	participantID, err := strconv.ParseUint(idStr, 10, 32)
-	if err != nil {
-		return
-	}
 
-	participant, err := h.participantUseCase.RemoveParticipant(ctx, uint(participantID), i.Member.User.ID)
+	participant, err := h.participantUseCase.RemoveParticipant(ctx, participantID, i.Member.User.ID)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotOrganizer) {
-			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Content: "❌ Seul l'organisateur peut retirer des participants.",
-					Flags:   discordgo.MessageFlagsEphemeral,
-				},
-			})
+			respondEphemeral(s, i.Interaction, "❌ Seul l'organisateur peut retirer des participants.")
 		}
 		return
 	}
@@ -221,18 +166,9 @@ func (h *Handler) HandleRemove(s *discordgo.Session, i *discordgo.InteractionCre
 	if event != nil {
 		luckyWinner, err := h.participantUseCase.GetNextWaitlistParticipant(ctx, event.ID)
 		if err == nil {
-			ch, err := s.UserChannelCreate(luckyWinner.UserID)
-			if err == nil && ch != nil {
-				s.ChannelMessageSend(ch.ID, fmt.Sprintf("🎉 **Bonne nouvelle !** Une place s'est libérée pour **%s**, tu es maintenant inscrit !", event.Title))
-			}
+			sendDM(s, luckyWinner.UserID, fmt.Sprintf("🎉 **Bonne nouvelle !** Une place s'est libérée pour **%s**, tu es maintenant inscrit !", event.Title))
 		}
 		h.updateEmbed(ctx, s, event.ChannelID, event.MessageID)
 	}
-	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: fmt.Sprintf("✅ %s a été retiré de l'événement.", participant.Username),
-			Flags:   discordgo.MessageFlagsEphemeral,
-		},
-	})
+	respondEphemeral(s, i.Interaction, fmt.Sprintf("✅ %s a été retiré de l'événement.", participant.Username))
 }
