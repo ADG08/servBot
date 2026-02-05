@@ -15,57 +15,40 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
+func parseSlots(slotsStr string) (int, error) {
+	if slotsStr == "" || slotsStr == "0" {
+		return 0, nil
+	}
+	n, err := strconv.Atoi(slotsStr)
+	if err != nil {
+		return 0, err
+	}
+	if n < 0 {
+		return 0, errors.New("invalid")
+	}
+	return n, nil
+}
+
 func (h *Handler) HandleModalSubmit(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	data := i.ModalSubmitData()
 	title, desc, dateStr, timeStr, slotsStr := pkgdiscord.ExtractModalData(data)
 
 	if dateStr == "" || timeStr == "" {
-		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "❌ Date et heure requises (JJ/MM/AAAA et HH:MM).",
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
-		})
+		respondEphemeral(s, i.Interaction, "❌ Date et heure requises (JJ/MM/AAAA et HH:MM).")
 		return
 	}
 	scheduledAt, err := pkgdiscord.ParseEventDateTime(dateStr, timeStr)
 	if err != nil {
-		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "❌ " + err.Error(),
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
-		})
+		respondEphemeral(s, i.Interaction, "❌ "+err.Error())
+		return
+	}
+	slots, err := parseSlots(slotsStr)
+	if err != nil {
+		respondEphemeral(s, i.Interaction, "❌ Nombre de places invalide (positif ou vide).")
 		return
 	}
 
-	var slots int
-	if slotsStr == "" || slotsStr == "0" {
-		slots = 0
-	} else {
-		var parseErr error
-		slots, parseErr = strconv.Atoi(slotsStr)
-		if parseErr != nil || slots < 0 {
-			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Content: "❌ Nombre de places invalide (positif ou vide).",
-					Flags:   discordgo.MessageFlagsEphemeral,
-				},
-			})
-			return
-		}
-	}
-
-	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: "Création du post dans le forum...",
-			Flags:   discordgo.MessageFlagsEphemeral,
-		},
-	})
+	respondEphemeral(s, i.Interaction, "Création du post dans le forum...")
 
 	user := i.Member.User
 	displayName := user.Username
@@ -74,21 +57,13 @@ func (h *Handler) HandleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 	}
 	embed := pkgdiscord.BuildNewEventEmbed(user.ID, desc, scheduledAt, slots, displayName, user.AvatarURL("256"))
 
-	btns := []discordgo.MessageComponent{
-		discordgo.ActionsRow{Components: []discordgo.MessageComponent{
-			discordgo.Button{Label: "Je participe", Style: discordgo.SuccessButton, CustomID: "btn_join"},
-			discordgo.Button{Label: "Se désister", Style: discordgo.DangerButton, CustomID: "btn_leave"},
-		}},
-	}
-
 	threadData := &discordgo.ThreadStart{
 		Name:                title,
 		AutoArchiveDuration: 1440,
 		Type:                discordgo.ChannelTypeGuildPublicThread,
 	}
 	messageData := &discordgo.MessageSend{
-		Embeds:     []*discordgo.MessageEmbed{embed},
-		Components: btns,
+		Embeds: []*discordgo.MessageEmbed{embed},
 	}
 
 	thread, err := s.ForumThreadStartComplex(h.forumChannelID, threadData, messageData)
@@ -173,29 +148,20 @@ func (h *Handler) HandleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 		})
 		return
 	}
+
+	h.updateEmbed(ctx, s, event.ChannelID, event.MessageID)
+	_ = s.MessageReactionAdd(event.ChannelID, event.MessageID, "✅")
 }
 
 func (h *Handler) HandleEditEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	ctx := context.Background()
 	event, err := h.eventUseCase.GetEventByMessageID(ctx, i.Message.ID)
 	if err != nil {
-		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "❌ Événement non trouvé.",
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
-		})
+		respondEphemeral(s, i.Interaction, "❌ Événement non trouvé.")
 		return
 	}
 	if i.Member.User.ID != event.CreatorID {
-		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "❌ Seul l'organisateur peut modifier la sortie.",
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
-		})
+		respondEphemeral(s, i.Interaction, "❌ Seul l'organisateur peut modifier la sortie.")
 		return
 	}
 
@@ -241,60 +207,28 @@ func (h *Handler) HandleEditModalSubmit(s *discordgo.Session, i *discordgo.Inter
 	title, desc, dateStr, timeStr, slotsStr := pkgdiscord.ExtractModalData(data)
 
 	var scheduledAt time.Time
-	// Modal has Required: true for date/time; guard for legacy/in-flight submissions with empty values.
 	if dateStr != "" && timeStr != "" {
-		var err error
-		scheduledAt, err = pkgdiscord.ParseEventDateTime(dateStr, timeStr)
-		if err != nil {
-			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Content: "❌ " + err.Error(),
-					Flags:   discordgo.MessageFlagsEphemeral,
-				},
-			})
+		var parseErr error
+		scheduledAt, parseErr = pkgdiscord.ParseEventDateTime(dateStr, timeStr)
+		if parseErr != nil {
+			respondEphemeral(s, i.Interaction, "❌ "+parseErr.Error())
 			return
 		}
 	}
-
-	var slots int
-	if slotsStr == "" || slotsStr == "0" {
-		slots = 0
-	} else {
-		var err error
-		slots, err = strconv.Atoi(slotsStr)
-		if err != nil || slots < 0 {
-			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Content: "❌ Nombre de places invalide (positif ou vide).",
-					Flags:   discordgo.MessageFlagsEphemeral,
-				},
-			})
-			return
-		}
+	slots, err := parseSlots(slotsStr)
+	if err != nil {
+		respondEphemeral(s, i.Interaction, "❌ Nombre de places invalide (positif ou vide).")
+		return
 	}
 
 	ctx := context.Background()
 	event, err := h.eventUseCase.GetEventByMessageID(ctx, i.Message.ID)
 	if err != nil {
-		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "❌ Événement non trouvé.",
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
-		})
+		respondEphemeral(s, i.Interaction, "❌ Événement non trouvé.")
 		return
 	}
 	if i.Member.User.ID != event.CreatorID {
-		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "❌ Seul l'organisateur peut modifier la sortie.",
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
-		})
+		respondEphemeral(s, i.Interaction, "❌ Seul l'organisateur peut modifier la sortie.")
 		return
 	}
 
@@ -308,32 +242,14 @@ func (h *Handler) HandleEditModalSubmit(s *discordgo.Session, i *discordgo.Inter
 	if err := h.eventUseCase.UpdateEvent(ctx, event); err != nil {
 		if errors.Is(err, domain.ErrCannotReduceSlots) {
 			confirmedParticipants, _ := h.eventUseCase.GetConfirmedParticipants(ctx, event.ID)
-			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Content: fmt.Sprintf("❌ Impossible de réduire à %d places : il y a déjà %d participants confirmés. Retirez d'abord des participants.", slots, len(confirmedParticipants)),
-					Flags:   discordgo.MessageFlagsEphemeral,
-				},
-			})
+			respondEphemeral(s, i.Interaction, fmt.Sprintf("❌ Impossible de réduire à %d places : il y a déjà %d participants confirmés. Retirez d'abord des participants.", slots, len(confirmedParticipants)))
 			return
 		}
 		log.Printf("❌ Erreur lors de la mise à jour de l'événement: %v", err)
-		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "❌ Erreur lors de la mise à jour.",
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
-		})
+		respondEphemeral(s, i.Interaction, "❌ Erreur lors de la mise à jour.")
 		return
 	}
 
 	h.updateEmbed(ctx, s, event.ChannelID, event.MessageID)
-	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: "✅ Sortie modifiée avec succès !",
-			Flags:   discordgo.MessageFlagsEphemeral,
-		},
-	})
+	respondEphemeral(s, i.Interaction, "✅ Sortie modifiée avec succès !")
 }

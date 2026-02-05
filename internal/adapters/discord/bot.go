@@ -44,6 +44,8 @@ func NewBot(cfg *config.Config, eventRepo output.EventRepository, participantRep
 
 func (b *Bot) setupHandlers() {
 	b.session.AddHandler(b.handleInteraction)
+	b.session.AddHandler(b.handleMessageReactionAdd)
+	b.session.AddHandler(b.handleMessageReactionRemove)
 }
 
 func (b *Bot) handleInteraction(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -75,15 +77,46 @@ func (b *Bot) handleInteraction(s *discordgo.Session, i *discordgo.InteractionCr
 			b.handler.HandleEditEvent(s, i)
 		} else {
 			switch customID {
-			case "btn_join":
-				b.handler.HandleJoin(s, i)
-			case "btn_leave":
-				b.handler.HandleLeave(s, i)
 			case "select_promote":
 				b.handler.HandlePromote(s, i)
 			case "select_remove":
 				b.handler.HandleRemove(s, i)
 			}
+		}
+	}
+}
+
+func (b *Bot) handleMessageReactionAdd(s *discordgo.Session, r *discordgo.MessageReactionAdd) {
+	if r.Emoji.Name != reactionJoinEmoji || r.UserID == s.State.User.ID {
+		return
+	}
+	username := r.UserID
+	if r.Member != nil && r.Member.User != nil {
+		username = r.Member.User.Username
+	}
+	b.handler.HandleReactionJoin(s, r.ChannelID, r.MessageID, r.UserID, username)
+}
+
+func (b *Bot) handleMessageReactionRemove(s *discordgo.Session, r *discordgo.MessageReactionRemove) {
+	if r.Emoji.Name != reactionJoinEmoji || r.UserID == s.State.User.ID {
+		return
+	}
+	b.handler.HandleReactionLeave(s, r.ChannelID, r.MessageID, r.UserID)
+}
+
+func (b *Bot) deleteAllCommands(appID, guildID string) {
+	scope := "global"
+	if guildID != "" {
+		scope = "guild"
+	}
+	existing, err := b.session.ApplicationCommands(appID, guildID)
+	if err != nil {
+		log.Printf("⚠️ Erreur lors de la récupération des commandes (%s): %v", scope, err)
+		return
+	}
+	for _, cmd := range existing {
+		if err := b.session.ApplicationCommandDelete(appID, guildID, cmd.ID); err != nil {
+			log.Printf("⚠️ Erreur lors de la suppression de la commande %s (%s): %v", cmd.Name, scope, err)
 		}
 	}
 }
@@ -95,31 +128,10 @@ func (b *Bot) Start() error {
 	defer b.session.Close()
 
 	appID := b.session.State.User.ID
-
-	// On nettoie d'abord toutes les anciennes commandes pour éviter les doublons.
-	// 1) Globales
-	if existing, err := b.session.ApplicationCommands(appID, ""); err != nil {
-		log.Printf("⚠️ Erreur lors de la récupération des commandes globales: %v", err)
-	} else {
-		for _, cmd := range existing {
-			if err := b.session.ApplicationCommandDelete(appID, "", cmd.ID); err != nil {
-				log.Printf("⚠️ Erreur lors de la suppression de la commande globale %s: %v", cmd.Name, err)
-			}
-		}
-	}
-
-	// 2) De guilde (si GUILD_ID est configuré)
 	targetGuildID := b.config.GuildID
+	b.deleteAllCommands(appID, "")
 	if targetGuildID != "" {
-		if existing, err := b.session.ApplicationCommands(appID, targetGuildID); err != nil {
-			log.Printf("⚠️ Erreur lors de la récupération des commandes de guilde: %v", err)
-		} else {
-			for _, cmd := range existing {
-				if err := b.session.ApplicationCommandDelete(appID, targetGuildID, cmd.ID); err != nil {
-					log.Printf("⚠️ Erreur lors de la suppression de la commande de guilde %s: %v", cmd.Name, err)
-				}
-			}
-		}
+		b.deleteAllCommands(appID, targetGuildID)
 	}
 
 	commands := []*discordgo.ApplicationCommand{
