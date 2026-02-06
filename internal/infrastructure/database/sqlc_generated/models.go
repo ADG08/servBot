@@ -9,18 +9,20 @@ import (
 )
 
 type Event struct {
-	ID                int64
-	MessageID         string
-	ChannelID         string
-	CreatorID         string
-	Title             string
-	Description       string
-	MaxSlots          int32
-	ScheduledAt       pgtype.Timestamptz
-	PrivateChannelID  string
-	QuestionsThreadID string
-	CreatedAt         pgtype.Timestamptz
-	UpdatedAt         pgtype.Timestamptz
+	ID                          int64
+	MessageID                   string
+	ChannelID                   string
+	CreatorID                   string
+	Title                       string
+	Description                 string
+	MaxSlots                    int32
+	ScheduledAt                 pgtype.Timestamptz
+	PrivateChannelID            string
+	QuestionsThreadID           string
+	OrganizerValidationDmSentAt pgtype.Timestamptz
+	OrganizerStep1FinalizedAt   pgtype.Timestamptz
+	CreatedAt                   pgtype.Timestamptz
+	UpdatedAt                   pgtype.Timestamptz
 }
 
 type Participant struct {

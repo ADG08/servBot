@@ -3,6 +3,20 @@ INSERT INTO events (message_id, channel_id, creator_id, title, description, max_
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 RETURNING *;
 
+-- name: FindEventsNeedingH48OrganizerDM :many
+SELECT * FROM events
+WHERE scheduled_at IS NOT NULL
+  AND scheduled_at > $1
+  AND scheduled_at - interval '48 hours' <= $1
+  AND scheduled_at - interval '47 hours' > $1
+  AND organizer_validation_dm_sent_at IS NULL;
+
+-- name: MarkOrganizerValidationDMSent :exec
+UPDATE events SET organizer_validation_dm_sent_at = NOW(), updated_at = NOW() WHERE id = $1;
+
+-- name: MarkOrganizerStep1Finalized :exec
+UPDATE events SET organizer_step1_finalized_at = NOW(), updated_at = NOW() WHERE id = $1;
+
 -- name: GetEventByMessageID :one
 SELECT * FROM events WHERE message_id = $1;
 

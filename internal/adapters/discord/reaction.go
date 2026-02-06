@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
+	"time"
 
 	"servbot/internal/domain"
 
@@ -37,6 +39,31 @@ func (h *Handler) HandleReactionJoin(s *discordgo.Session, channelID, messageID,
 		return
 	}
 	h.updateEmbed(ctx, s, channelID, messageID)
+
+	now := time.Now()
+	if isCasA(event.ScheduledAt, now) {
+		eventFull, _ := h.eventUseCase.GetEventByID(ctx, event.ID)
+		if eventFull != nil {
+			confirmedCount, _ := h.eventUseCase.GetConfirmedParticipants(ctx, event.ID)
+			isComplet := eventFull.MaxSlots > 0 && len(confirmedCount) >= eventFull.MaxSlots
+			if isComplet && eventFull.OrganizerValidationDMSentAt.IsZero() {
+				evWP := eventToEventWithParticipants(eventFull)
+				if err := h.sendOrganizerValidationDM(s, evWP); err != nil {
+					log.Printf("❌ Envoi MP validation organisateur (Cas A complet): %v", err)
+				} else {
+					_ = h.eventUseCase.MarkOrganizerValidationDMSent(ctx, event.ID)
+				}
+			}
+		}
+	} else if isCasB(event.ScheduledAt, now) {
+		participant, _ := h.participantUseCase.GetParticipantByEventIDAndUserID(ctx, event.ID, userID)
+		if participant != nil {
+			if err := h.sendOrganizerAcceptRefuseDM(s, event.Title, event.CreatorID, channelID, messageID, participant); err != nil {
+				log.Printf("❌ Envoi MP Accepter/Refuser organisateur (Cas B): %v", err)
+			}
+		}
+	}
+
 	sendDM(s, userID, reply)
 }
 
@@ -51,14 +78,14 @@ func (h *Handler) HandleReactionLeave(s *discordgo.Session, channelID, messageID
 	}
 	wasConfirmed, err := h.participantUseCase.LeaveEvent(ctx, event.ID, userID)
 	if err != nil {
-		sendDM(s, userID, "Tu n'étais pas inscrit.")
+		sendDM(s, userID, "Tu ne faisais pas partie des intéressés.")
 		return
 	}
 	msg := "🗑️ Tu t'es désisté."
 	if wasConfirmed {
 		luckyWinner, err := h.participantUseCase.GetNextWaitlistParticipant(ctx, event.ID)
 		if err == nil {
-			sendDM(s, luckyWinner.UserID, fmt.Sprintf("🎉 **Bonne nouvelle !** Une place s'est libérée pour **%s**, tu es maintenant inscrit !", event.Title))
+			sendDM(s, luckyWinner.UserID, fmt.Sprintf("🎉 **Bonne nouvelle !** Une place s'est libérée pour **%s**, tu es maintenant parmi les confirmés !", event.Title))
 		}
 	}
 	h.updateEmbed(ctx, s, channelID, messageID)

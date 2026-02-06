@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 
@@ -92,6 +93,32 @@ func (r *EventRepository) FindByCreatorID(ctx context.Context, creatorID string)
 		out[i] = eventToDomain(rows[i])
 	}
 	return out, nil
+}
+
+func (r *EventRepository) FindEventsNeedingH48OrganizerDM(ctx context.Context, now time.Time) ([]entities.Event, error) {
+	rows, err := r.q.FindEventsNeedingH48OrganizerDM(ctx, pgtype.Timestamptz{Time: now, Valid: true})
+	if err != nil {
+		return nil, fmt.Errorf("find events needing H48 organizer DM: %w", err)
+	}
+	out := make([]entities.Event, len(rows))
+	for i := range rows {
+		out[i] = eventToDomain(rows[i])
+	}
+	return out, nil
+}
+
+func (r *EventRepository) MarkOrganizerValidationDMSent(ctx context.Context, eventID uint) error {
+	if err := r.q.MarkOrganizerValidationDMSent(ctx, int64(eventID)); err != nil {
+		return fmt.Errorf("mark organizer validation DM sent: %w", err)
+	}
+	return nil
+}
+
+func (r *EventRepository) MarkOrganizerStep1Finalized(ctx context.Context, eventID uint) error {
+	if err := r.q.MarkOrganizerStep1Finalized(ctx, int64(eventID)); err != nil {
+		return fmt.Errorf("mark organizer step1 finalized: %w", err)
+	}
+	return nil
 }
 
 func (r *EventRepository) Update(ctx context.Context, event *entities.Event) error {

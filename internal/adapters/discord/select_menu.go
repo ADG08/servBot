@@ -166,7 +166,7 @@ func (h *Handler) HandleRemove(s *discordgo.Session, i *discordgo.InteractionCre
 	if event != nil {
 		luckyWinner, err := h.participantUseCase.GetNextWaitlistParticipant(ctx, event.ID)
 		if err == nil {
-			sendDM(s, luckyWinner.UserID, fmt.Sprintf("🎉 **Bonne nouvelle !** Une place s'est libérée pour **%s**, tu es maintenant inscrit !", event.Title))
+			sendDM(s, luckyWinner.UserID, fmt.Sprintf("🎉 **Bonne nouvelle !** Une place s'est libérée pour **%s**, tu es maintenant parmi les confirmés !", event.Title))
 		}
 		h.updateEmbed(ctx, s, event.ChannelID, event.MessageID)
 	}

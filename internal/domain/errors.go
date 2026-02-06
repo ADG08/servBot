@@ -14,9 +14,3 @@ var (
 	ErrCannotReduceSlots       = errors.New("impossible de réduire le nombre de places")
 	ErrNotOrganizer            = errors.New("seul l'organisateur peut effectuer cette action")
 )
-
-// Participant status constants.
-const (
-	StatusConfirmed = "CONFIRMED"
-	StatusWaitlist  = "WAITLIST"
-)
