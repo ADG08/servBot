@@ -12,7 +12,6 @@ services:
       POSTGRES_INITDB_ARGS: "-E UTF8 --locale=C"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./sqlc/schema:/docker-entrypoint-initdb.d:ro
     # Ne pas exposer 5432 en prod (accès uniquement depuis le réseau interne)
     ports: []
     healthcheck:

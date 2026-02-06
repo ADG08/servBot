@@ -1,22 +1,21 @@
 # Usage:
-#   1. Create .env with TOKEN and optionally FORUM_CHANNEL_ID.
+#   1. Copy .env.example → .env and fill in the values.
 #   2. Run: docker compose up --build
-#   PostgreSQL starts with schema from sqlc/schema/; bot connects after DB is healthy.
+#   PostgreSQL starts; bot applies migrations automatically then connects.
 #
 services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: servbot
-      POSTGRES_PASSWORD: servbot
-      POSTGRES_DB: servbot
+      POSTGRES_USER: ${POSTGRES_USER:-servbot}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-servbot}
+      POSTGRES_DB: ${POSTGRES_DB:-servbot}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./sqlc/schema:/docker-entrypoint-initdb.d
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U servbot -d servbot"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-servbot} -d $${POSTGRES_DB:-servbot}"]
       interval: 2s
       timeout: 5s
       retries: 5
@@ -25,10 +24,26 @@ services:
     build: .
     env_file: .env
     environment:
-      DATABASE_URL: postgres://servbot:servbot@postgres:5432/servbot?sslmode=disable
+      DATABASE_URL: postgres://${POSTGRES_USER:-servbot}:${POSTGRES_PASSWORD:-servbot}@postgres:5432/${POSTGRES_DB:-servbot}?sslmode=disable
     depends_on:
       postgres:
         condition: service_healthy
+
+  # Manual migration commands (make migrate-up / make migrate-down)
+  migrate:
+    image: migrate/migrate:v4.19.1
+    volumes:
+      - ./migrations:/migrations
+    entrypoint:
+      [
+        "migrate",
+        "-path", "/migrations",
+        "-database", "postgres://${POSTGRES_USER:-servbot}:${POSTGRES_PASSWORD:-servbot}@postgres:5432/${POSTGRES_DB:-servbot}?sslmode=disable",
+      ]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles: ["tools"]
 
 volumes:
   postgres_data:

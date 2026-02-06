@@ -22,6 +22,7 @@ RUN apk --no-cache add ca-certificates tzdata && \
 WORKDIR /app
 
 COPY --from=builder --chown=appuser:appuser /servbot .
+COPY --from=builder --chown=appuser:appuser /app/migrations ./migrations
 
 USER appuser
 
