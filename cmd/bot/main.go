@@ -14,6 +14,14 @@ import (
 func main() {
 	cfg := config.Load()
 
+	migrationsPath := os.Getenv("MIGRATIONS_PATH")
+	if migrationsPath == "" {
+		migrationsPath = "migrations"
+	}
+	if err := database.RunMigrations(cfg.DatabaseURL, migrationsPath); err != nil {
+		log.Fatalf("❌ Erreur lors des migrations: %v", err)
+	}
+
 	ctx := context.Background()
 	pool, err := database.NewPool(ctx, cfg.DatabaseURL)
 	if err != nil {
