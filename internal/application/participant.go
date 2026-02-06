@@ -32,7 +32,7 @@ func (s *ParticipantService) JoinEvent(ctx context.Context, eventID uint, userID
 	}
 	existing, _ := s.participantRepo.FindByEventIDAndUserID(ctx, eventID, userID)
 	if existing != nil {
-		msg := "Tu es déjà inscrit !"
+		msg := "Tu as déjà manifesté ton intérêt."
 		if existing.Status == domain.StatusWaitlist {
 			msg = "Tu es en liste d'attente."
 		}
@@ -43,7 +43,7 @@ func (s *ParticipantService) JoinEvent(ctx context.Context, eventID uint, userID
 		return "", fmt.Errorf("count confirmed: %w", err)
 	}
 	status := domain.StatusConfirmed
-	reply := "✅ Tu es inscrit !"
+	reply := "✅ Ta demande est enregistrée !"
 	if event.MaxSlots > 0 && int(confirmedCount) >= event.MaxSlots {
 		status = domain.StatusWaitlist
 		reply = "⚠️ Complet ! Tu es en **liste d'attente**."
@@ -59,6 +59,14 @@ func (s *ParticipantService) JoinEvent(ctx context.Context, eventID uint, userID
 		return "", fmt.Errorf("create participant: %w", err)
 	}
 	return reply, nil
+}
+
+func (s *ParticipantService) GetParticipantByEventIDAndUserID(ctx context.Context, eventID uint, userID string) (*entities.Participant, error) {
+	return s.participantRepo.FindByEventIDAndUserID(ctx, eventID, userID)
+}
+
+func (s *ParticipantService) GetParticipantByID(ctx context.Context, id uint) (*entities.Participant, error) {
+	return s.participantRepo.FindByID(ctx, id)
 }
 
 func (s *ParticipantService) LeaveEvent(ctx context.Context, eventID uint, userID string) (bool, error) {

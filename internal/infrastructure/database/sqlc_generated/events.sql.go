@@ -14,7 +14,7 @@ import (
 const createEvent = `-- name: CreateEvent :one
 INSERT INTO events (message_id, channel_id, creator_id, title, description, max_slots, scheduled_at, private_channel_id, questions_thread_id)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-RETURNING id, message_id, channel_id, creator_id, title, description, max_slots, scheduled_at, private_channel_id, questions_thread_id, created_at, updated_at
+RETURNING id, message_id, channel_id, creator_id, title, description, max_slots, scheduled_at, private_channel_id, questions_thread_id, organizer_validation_dm_sent_at, organizer_step1_finalized_at, created_at, updated_at
 `
 
 type CreateEventParams struct {
@@ -53,6 +53,8 @@ func (q *Queries) CreateEvent(ctx context.Context, arg CreateEventParams) (Event
 		&i.ScheduledAt,
 		&i.PrivateChannelID,
 		&i.QuestionsThreadID,
+		&i.OrganizerValidationDmSentAt,
+		&i.OrganizerStep1FinalizedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -68,8 +70,52 @@ func (q *Queries) DeleteEvent(ctx context.Context, id int64) error {
 	return err
 }
 
+const findEventsNeedingH48OrganizerDM = `-- name: FindEventsNeedingH48OrganizerDM :many
+SELECT id, message_id, channel_id, creator_id, title, description, max_slots, scheduled_at, private_channel_id, questions_thread_id, organizer_validation_dm_sent_at, organizer_step1_finalized_at, created_at, updated_at FROM events
+WHERE scheduled_at IS NOT NULL
+  AND scheduled_at > $1
+  AND scheduled_at - interval '48 hours' <= $1
+  AND scheduled_at - interval '47 hours' > $1
+  AND organizer_validation_dm_sent_at IS NULL
+`
+
+func (q *Queries) FindEventsNeedingH48OrganizerDM(ctx context.Context, scheduledAt pgtype.Timestamptz) ([]Event, error) {
+	rows, err := q.db.Query(ctx, findEventsNeedingH48OrganizerDM, scheduledAt)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Event
+	for rows.Next() {
+		var i Event
+		if err := rows.Scan(
+			&i.ID,
+			&i.MessageID,
+			&i.ChannelID,
+			&i.CreatorID,
+			&i.Title,
+			&i.Description,
+			&i.MaxSlots,
+			&i.ScheduledAt,
+			&i.PrivateChannelID,
+			&i.QuestionsThreadID,
+			&i.OrganizerValidationDmSentAt,
+			&i.OrganizerStep1FinalizedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getEventByID = `-- name: GetEventByID :one
-SELECT id, message_id, channel_id, creator_id, title, description, max_slots, scheduled_at, private_channel_id, questions_thread_id, created_at, updated_at FROM events WHERE id = $1
+SELECT id, message_id, channel_id, creator_id, title, description, max_slots, scheduled_at, private_channel_id, questions_thread_id, organizer_validation_dm_sent_at, organizer_step1_finalized_at, created_at, updated_at FROM events WHERE id = $1
 `
 
 func (q *Queries) GetEventByID(ctx context.Context, id int64) (Event, error) {
@@ -86,6 +132,8 @@ func (q *Queries) GetEventByID(ctx context.Context, id int64) (Event, error) {
 		&i.ScheduledAt,
 		&i.PrivateChannelID,
 		&i.QuestionsThreadID,
+		&i.OrganizerValidationDmSentAt,
+		&i.OrganizerStep1FinalizedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -93,7 +141,7 @@ func (q *Queries) GetEventByID(ctx context.Context, id int64) (Event, error) {
 }
 
 const getEventByMessageID = `-- name: GetEventByMessageID :one
-SELECT id, message_id, channel_id, creator_id, title, description, max_slots, scheduled_at, private_channel_id, questions_thread_id, created_at, updated_at FROM events WHERE message_id = $1
+SELECT id, message_id, channel_id, creator_id, title, description, max_slots, scheduled_at, private_channel_id, questions_thread_id, organizer_validation_dm_sent_at, organizer_step1_finalized_at, created_at, updated_at FROM events WHERE message_id = $1
 `
 
 func (q *Queries) GetEventByMessageID(ctx context.Context, messageID string) (Event, error) {
@@ -110,6 +158,8 @@ func (q *Queries) GetEventByMessageID(ctx context.Context, messageID string) (Ev
 		&i.ScheduledAt,
 		&i.PrivateChannelID,
 		&i.QuestionsThreadID,
+		&i.OrganizerValidationDmSentAt,
+		&i.OrganizerStep1FinalizedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -117,7 +167,7 @@ func (q *Queries) GetEventByMessageID(ctx context.Context, messageID string) (Ev
 }
 
 const getEventsByCreatorID = `-- name: GetEventsByCreatorID :many
-SELECT id, message_id, channel_id, creator_id, title, description, max_slots, scheduled_at, private_channel_id, questions_thread_id, created_at, updated_at FROM events WHERE creator_id = $1 ORDER BY created_at DESC
+SELECT id, message_id, channel_id, creator_id, title, description, max_slots, scheduled_at, private_channel_id, questions_thread_id, organizer_validation_dm_sent_at, organizer_step1_finalized_at, created_at, updated_at FROM events WHERE creator_id = $1 ORDER BY created_at DESC
 `
 
 func (q *Queries) GetEventsByCreatorID(ctx context.Context, creatorID string) ([]Event, error) {
@@ -140,6 +190,8 @@ func (q *Queries) GetEventsByCreatorID(ctx context.Context, creatorID string) ([
 			&i.ScheduledAt,
 			&i.PrivateChannelID,
 			&i.QuestionsThreadID,
+			&i.OrganizerValidationDmSentAt,
+			&i.OrganizerStep1FinalizedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -151,6 +203,24 @@ func (q *Queries) GetEventsByCreatorID(ctx context.Context, creatorID string) ([
 		return nil, err
 	}
 	return items, nil
+}
+
+const markOrganizerStep1Finalized = `-- name: MarkOrganizerStep1Finalized :exec
+UPDATE events SET organizer_step1_finalized_at = NOW(), updated_at = NOW() WHERE id = $1
+`
+
+func (q *Queries) MarkOrganizerStep1Finalized(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, markOrganizerStep1Finalized, id)
+	return err
+}
+
+const markOrganizerValidationDMSent = `-- name: MarkOrganizerValidationDMSent :exec
+UPDATE events SET organizer_validation_dm_sent_at = NOW(), updated_at = NOW() WHERE id = $1
+`
+
+func (q *Queries) MarkOrganizerValidationDMSent(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, markOrganizerValidationDMSent, id)
+	return err
 }
 
 const updateEvent = `-- name: UpdateEvent :exec

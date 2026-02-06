@@ -19,18 +19,20 @@ func pgtypeTimestamptzToTime(t pgtype.Timestamptz) time.Time {
 
 func eventToDomain(e sqlc_generated.Event) entities.Event {
 	return entities.Event{
-		ID:                uint(e.ID),
-		MessageID:         e.MessageID,
-		ChannelID:         e.ChannelID,
-		CreatorID:         e.CreatorID,
-		Title:             e.Title,
-		Description:       e.Description,
-		MaxSlots:          int(e.MaxSlots),
-		ScheduledAt:       pgtypeTimestamptzToTime(e.ScheduledAt),
-		PrivateChannelID:  e.PrivateChannelID,
-		QuestionsThreadID: e.QuestionsThreadID,
-		CreatedAt:         pgtypeTimestamptzToTime(e.CreatedAt),
-		UpdatedAt:         pgtypeTimestamptzToTime(e.UpdatedAt),
+		ID:                          uint(e.ID),
+		MessageID:                   e.MessageID,
+		ChannelID:                   e.ChannelID,
+		CreatorID:                   e.CreatorID,
+		Title:                       e.Title,
+		Description:                 e.Description,
+		MaxSlots:                    int(e.MaxSlots),
+		ScheduledAt:                 pgtypeTimestamptzToTime(e.ScheduledAt),
+		PrivateChannelID:            e.PrivateChannelID,
+		QuestionsThreadID:           e.QuestionsThreadID,
+		OrganizerValidationDMSentAt: pgtypeTimestamptzToTime(e.OrganizerValidationDmSentAt),
+		OrganizerStep1FinalizedAt:   pgtypeTimestamptzToTime(e.OrganizerStep1FinalizedAt),
+		CreatedAt:                   pgtypeTimestamptzToTime(e.CreatedAt),
+		UpdatedAt:                   pgtypeTimestamptzToTime(e.UpdatedAt),
 	}
 }
 

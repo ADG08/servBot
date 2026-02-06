@@ -31,7 +31,7 @@ func NewBot(cfg *config.Config, eventRepo output.EventRepository, participantRep
 		log.Fatal("❌ Erreur lors de la création de la session Discord:", err)
 	}
 
-	handler := NewHandler(eventUC, participantUC, cfg.ForumChannelID)
+	handler := NewHandler(eventUC, participantUC, cfg.ForumChannelID, cfg.GuildID)
 
 	bot := &Bot{
 		session: s,
@@ -68,13 +68,24 @@ func (b *Bot) handleInteraction(s *discordgo.Session, i *discordgo.InteractionCr
 	case discordgo.InteractionMessageComponent:
 		componentData := i.MessageComponentData()
 		customID := componentData.CustomID
-
-		if strings.HasPrefix(customID, "btn_manage_waitlist_") {
-			b.handler.HandleManageWaitlist(s, i)
-		} else if strings.HasPrefix(customID, "btn_remove_participant_") {
-			b.handler.HandleRemoveParticipant(s, i)
-		} else if strings.HasPrefix(customID, "btn_edit_event_") {
-			b.handler.HandleEditEvent(s, i)
+		if strings.HasPrefix(customID, "btn_organizer_") {
+			switch {
+			case strings.HasPrefix(customID, "btn_organizer_finalize_"):
+				b.handler.HandleOrganizerFinalizeStep1(s, i)
+			case strings.HasPrefix(customID, "btn_organizer_accept_"):
+				b.handler.HandleOrganizerAccept(s, i)
+			case strings.HasPrefix(customID, "btn_organizer_refuse_"):
+				b.handler.HandleOrganizerRefuse(s, i)
+			}
+		} else if strings.HasPrefix(customID, "btn_") {
+			switch {
+			case strings.HasPrefix(customID, "btn_manage_waitlist_"):
+				b.handler.HandleManageWaitlist(s, i)
+			case strings.HasPrefix(customID, "btn_remove_participant_"):
+				b.handler.HandleRemoveParticipant(s, i)
+			case strings.HasPrefix(customID, "btn_edit_event_"):
+				b.handler.HandleEditEvent(s, i)
+			}
 		} else {
 			switch customID {
 			case "select_promote":
@@ -154,6 +165,8 @@ func (b *Bot) Start() error {
 			log.Printf("⚠️ Erreur lors de l'enregistrement de la commande %s (%s): %v", cmd.Name, scope, err)
 		}
 	}
+
+	go b.handler.RunOrganizerValidationScheduler(b.session)
 
 	fmt.Println("🤖 Bot en ligne ! Appuyez sur CTRL+C pour quitter.")
 	stop := make(chan os.Signal, 1)

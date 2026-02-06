@@ -74,3 +74,22 @@ func (s *EventService) GetConfirmedParticipants(ctx context.Context, eventID uin
 func (s *EventService) GetEventsByCreatorID(ctx context.Context, creatorID string) ([]entities.Event, error) {
 	return s.eventRepo.FindByCreatorID(ctx, creatorID)
 }
+
+func (s *EventService) EventsNeedingH48OrganizerDM(ctx context.Context, now time.Time) ([]entities.Event, error) {
+	return s.eventRepo.FindEventsNeedingH48OrganizerDM(ctx, now)
+}
+
+func (s *EventService) MarkOrganizerValidationDMSent(ctx context.Context, eventID uint) error {
+	return s.eventRepo.MarkOrganizerValidationDMSent(ctx, eventID)
+}
+
+func (s *EventService) FinalizeOrganizerStep1(ctx context.Context, eventID uint, creatorID string) error {
+	event, err := s.eventRepo.FindByID(ctx, eventID)
+	if err != nil {
+		return domain.ErrEventNotFound
+	}
+	if event.CreatorID != creatorID {
+		return domain.ErrNotOrganizer
+	}
+	return s.eventRepo.MarkOrganizerStep1Finalized(ctx, eventID)
+}
