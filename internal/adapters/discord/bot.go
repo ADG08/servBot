@@ -101,11 +101,11 @@ func (b *Bot) handleMessageReactionAdd(s *discordgo.Session, r *discordgo.Messag
 	if r.Emoji.Name != reactionJoinEmoji || r.UserID == s.State.User.ID {
 		return
 	}
-	username := r.UserID
-	if r.Member != nil && r.Member.User != nil {
-		username = r.Member.User.Username
+	displayName := resolveDisplayName(r.Member)
+	if displayName == "" {
+		displayName = r.UserID
 	}
-	b.handler.HandleReactionJoin(s, r.ChannelID, r.MessageID, r.UserID, username)
+	b.handler.HandleReactionJoin(s, r.ChannelID, r.MessageID, r.UserID, displayName)
 }
 
 func (b *Bot) handleMessageReactionRemove(s *discordgo.Session, r *discordgo.MessageReactionRemove) {

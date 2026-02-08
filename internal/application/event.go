@@ -83,13 +83,19 @@ func (s *EventService) MarkOrganizerValidationDMSent(ctx context.Context, eventI
 	return s.eventRepo.MarkOrganizerValidationDMSent(ctx, eventID)
 }
 
-func (s *EventService) FinalizeOrganizerStep1(ctx context.Context, eventID uint, creatorID string) error {
+func (s *EventService) FinalizeOrganizerStep1(ctx context.Context, eventID uint, creatorID string) (*entities.Event, error) {
 	event, err := s.eventRepo.FindByID(ctx, eventID)
 	if err != nil {
-		return domain.ErrEventNotFound
+		return nil, domain.ErrEventNotFound
 	}
 	if event.CreatorID != creatorID {
-		return domain.ErrNotOrganizer
+		return nil, domain.ErrNotOrganizer
 	}
-	return s.eventRepo.MarkOrganizerStep1Finalized(ctx, eventID)
+	if !event.OrganizerStep1FinalizedAt.IsZero() {
+		return nil, domain.ErrEventAlreadyFinalized
+	}
+	if err := s.eventRepo.MarkOrganizerStep1Finalized(ctx, eventID); err != nil {
+		return nil, err
+	}
+	return s.eventRepo.FindByID(ctx, eventID)
 }

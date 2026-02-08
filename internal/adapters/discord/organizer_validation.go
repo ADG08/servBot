@@ -158,6 +158,16 @@ func eventToEventWithParticipants(e *entities.Event) *eventWithParticipants {
 	}
 }
 
+func interactionUserID(i *discordgo.InteractionCreate) string {
+	if i.User != nil {
+		return i.User.ID
+	}
+	if i.Member != nil && i.Member.User != nil {
+		return i.Member.User.ID
+	}
+	return ""
+}
+
 func (h *Handler) HandleOrganizerFinalizeStep1(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	ctx := context.Background()
 	customID := i.MessageComponentData().CustomID
@@ -170,28 +180,82 @@ func (h *Handler) HandleOrganizerFinalizeStep1(s *discordgo.Session, i *discordg
 	if err != nil {
 		return
 	}
-	userID := i.Member.User.ID
-	if i.User != nil {
-		userID = i.User.ID
-	}
-	err = h.eventUseCase.FinalizeOrganizerStep1(ctx, uint(eventID), userID)
+	userID := interactionUserID(i)
+
+	event, err := h.eventUseCase.FinalizeOrganizerStep1(ctx, uint(eventID), userID)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotOrganizer) {
-			content := "❌ Seul l'organisateur de cette sortie peut finaliser l'étape 1."
-			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{Content: content, Flags: discordgo.MessageFlagsEphemeral},
-			})
+		msg := "❌ Erreur lors de la finalisation."
+		switch {
+		case errors.Is(err, domain.ErrNotOrganizer):
+			msg = "❌ Seul l'organisateur de cette sortie peut finaliser l'étape 1."
+		case errors.Is(err, domain.ErrEventAlreadyFinalized):
+			msg = "ℹ️ Cette sortie a déjà été finalisée."
 		}
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{Content: msg, Flags: discordgo.MessageFlagsEphemeral},
+		})
 		return
 	}
+
+	for _, p := range event.Participants {
+		if p.Status != domain.StatusConfirmed || p.UserID == event.CreatorID {
+			continue
+		}
+		var dmContent string
+		if link := h.messageLink(event.ChannelID, event.MessageID); link != "" {
+			dmContent = fmt.Sprintf("🎉 **Ta participation à [%s](%s) est confirmée !**", event.Title, link)
+		} else {
+			dmContent = fmt.Sprintf("🎉 **Ta participation à %s est confirmée !**", event.Title)
+		}
+		if !event.ScheduledAt.IsZero() {
+			dmContent += fmt.Sprintf("\n📅 %s", pkgdiscord.FormatEventDateTime(event.ScheduledAt))
+		}
+		dmContent += "\nÀ bientôt !"
+		sendDM(s, p.UserID, dmContent)
+	}
+
+	if h.guildID != "" && !event.ScheduledAt.IsZero() {
+		h.createDiscordScheduledEvent(s, event)
+	}
+
+	h.updateEmbed(ctx, s, event.ChannelID, event.MessageID)
+
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
-			Content: "✅ Étape 1 finalisée.",
+			Content: "✅ Étape 1 finalisée ! Les participants confirmés ont été notifiés et l'événement a été ajouté au calendrier Discord.",
 			Flags:   discordgo.MessageFlagsEphemeral,
 		},
 	})
+}
+
+func (h *Handler) createDiscordScheduledEvent(s *discordgo.Session, event *entities.Event) {
+	startTime := event.ScheduledAt
+	endTime := startTime.Add(2 * time.Hour)
+
+	location := event.Description
+	if len(location) > 100 {
+		location = location[:97] + "..."
+	}
+	if location == "" {
+		location = "Voir les détails de la sortie"
+	}
+
+	_, err := s.GuildScheduledEventCreate(h.guildID, &discordgo.GuildScheduledEventParams{
+		Name:               event.Title,
+		Description:        event.Description,
+		ScheduledStartTime: &startTime,
+		ScheduledEndTime:   &endTime,
+		PrivacyLevel:       discordgo.GuildScheduledEventPrivacyLevelGuildOnly,
+		EntityType:         discordgo.GuildScheduledEventEntityTypeExternal,
+		EntityMetadata: &discordgo.GuildScheduledEventEntityMetadata{
+			Location: location,
+		},
+	})
+	if err != nil {
+		log.Printf("❌ Création événement calendrier Discord (event %d): %v", event.ID, err)
+	}
 }
 
 func (h *Handler) HandleOrganizerAccept(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -214,10 +278,7 @@ func (h *Handler) HandleOrganizerAccept(s *discordgo.Session, i *discordgo.Inter
 	if err != nil {
 		return
 	}
-	userID := i.Member.User.ID
-	if i.User != nil {
-		userID = i.User.ID
-	}
+	userID := interactionUserID(i)
 	if event.CreatorID != userID {
 		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -249,10 +310,7 @@ func (h *Handler) HandleOrganizerRefuse(s *discordgo.Session, i *discordgo.Inter
 	if err != nil {
 		return
 	}
-	userID := i.Member.User.ID
-	if i.User != nil {
-		userID = i.User.ID
-	}
+	userID := interactionUserID(i)
 	participant, err := h.participantUseCase.RemoveParticipant(ctx, uint(participantID), userID)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotOrganizer) {
@@ -268,6 +326,7 @@ func (h *Handler) HandleOrganizerRefuse(s *discordgo.Session, i *discordgo.Inter
 	}
 	event, _ := h.eventUseCase.GetEventByID(ctx, participant.EventID)
 	if event != nil {
+		_ = s.MessageReactionRemove(event.ChannelID, event.MessageID, reactionJoinEmoji, participant.UserID)
 		ch, _ := s.UserChannelCreate(participant.UserID)
 		if ch != nil {
 			s.ChannelMessageSend(ch.ID, fmt.Sprintf("L'organisateur de **%s** a refusé ton inscription.", event.Title))

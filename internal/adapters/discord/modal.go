@@ -51,10 +51,7 @@ func (h *Handler) HandleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 	respondEphemeral(s, i.Interaction, "Création du post dans le forum...")
 
 	user := i.Member.User
-	displayName := user.Username
-	if i.Member.Nick != "" {
-		displayName = i.Member.Nick
-	}
+	displayName := resolveDisplayName(i.Member)
 	embed := pkgdiscord.BuildNewEventEmbed(user.ID, desc, scheduledAt, slots, displayName, user.AvatarURL("256"))
 
 	threadData := &discordgo.ThreadStart{
@@ -162,6 +159,10 @@ func (h *Handler) HandleEditEvent(s *discordgo.Session, i *discordgo.Interaction
 	}
 	if i.Member.User.ID != event.CreatorID {
 		respondEphemeral(s, i.Interaction, "❌ Seul l'organisateur peut modifier la sortie.")
+		return
+	}
+	if !event.OrganizerStep1FinalizedAt.IsZero() {
+		respondEphemeral(s, i.Interaction, "🔒 Cette sortie est verrouillée (étape 1 finalisée). Aucune modification n'est possible.")
 		return
 	}
 
