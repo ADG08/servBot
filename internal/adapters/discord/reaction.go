@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"servbot/internal/domain"
+	"servbot/internal/domain/entities"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -40,6 +41,13 @@ func (h *Handler) HandleReactionJoin(s *discordgo.Session, channelID, messageID,
 	}
 	h.updateEmbed(ctx, s, channelID, messageID)
 
+	if event.IsFinalized() {
+		p, _ := h.participantUseCase.GetParticipantByEventIDAndUserID(ctx, event.ID, userID)
+		if p != nil && p.Status == domain.StatusConfirmed {
+			grantPrivateChannelAccess(s, event.PrivateChannelID, userID)
+		}
+	}
+
 	now := time.Now()
 	if isCasA(event.ScheduledAt, now) {
 		eventFull, _ := h.eventUseCase.GetEventByID(ctx, event.ID)
@@ -67,6 +75,17 @@ func (h *Handler) HandleReactionJoin(s *discordgo.Session, channelID, messageID,
 	sendDM(s, userID, reply)
 }
 
+func (h *Handler) promoteNextFromWaitlist(s *discordgo.Session, ctx context.Context, event *entities.Event) {
+	luckyWinner, err := h.participantUseCase.GetNextWaitlistParticipant(ctx, event.ID)
+	if err != nil {
+		return
+	}
+	sendDM(s, luckyWinner.UserID, fmt.Sprintf("🎉 **Bonne nouvelle !** Une place s'est libérée pour **%s**, tu es maintenant parmi les confirmés !", event.Title))
+	if event.IsFinalized() {
+		grantPrivateChannelAccess(s, event.PrivateChannelID, luckyWinner.UserID)
+	}
+}
+
 func (h *Handler) HandleReactionLeave(s *discordgo.Session, channelID, messageID, userID string) {
 	ctx := context.Background()
 	event, err := h.eventUseCase.GetEventByMessageID(ctx, messageID)
@@ -80,12 +99,10 @@ func (h *Handler) HandleReactionLeave(s *discordgo.Session, channelID, messageID
 	if err != nil {
 		return
 	}
+	revokePrivateChannelAccess(s, event.PrivateChannelID, userID)
 	msg := "🗑️ Tu t'es désisté."
 	if wasConfirmed {
-		luckyWinner, err := h.participantUseCase.GetNextWaitlistParticipant(ctx, event.ID)
-		if err == nil {
-			sendDM(s, luckyWinner.UserID, fmt.Sprintf("🎉 **Bonne nouvelle !** Une place s'est libérée pour **%s**, tu es maintenant parmi les confirmés !", event.Title))
-		}
+		h.promoteNextFromWaitlist(s, ctx, event)
 	}
 	h.updateEmbed(ctx, s, channelID, messageID)
 	sendDM(s, userID, msg)

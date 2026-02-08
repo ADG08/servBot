@@ -91,7 +91,7 @@ func (s *EventService) FinalizeOrganizerStep1(ctx context.Context, eventID uint,
 	if event.CreatorID != creatorID {
 		return nil, domain.ErrNotOrganizer
 	}
-	if !event.OrganizerStep1FinalizedAt.IsZero() {
+	if event.IsFinalized() {
 		return nil, domain.ErrEventAlreadyFinalized
 	}
 	if err := s.eventRepo.MarkOrganizerStep1Finalized(ctx, eventID); err != nil {

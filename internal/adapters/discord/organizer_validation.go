@@ -213,6 +213,7 @@ func (h *Handler) HandleOrganizerFinalizeStep1(s *discordgo.Session, i *discordg
 		}
 		dmContent += "\nÀ bientôt !"
 		sendDM(s, p.UserID, dmContent)
+		grantPrivateChannelAccess(s, event.PrivateChannelID, p.UserID)
 	}
 
 	if h.guildID != "" && !event.ScheduledAt.IsZero() {
@@ -289,6 +290,27 @@ func (h *Handler) HandleOrganizerAccept(s *discordgo.Session, i *discordgo.Inter
 		})
 		return
 	}
+
+	if participant.Status == domain.StatusWaitlist {
+		promoted, err := h.participantUseCase.PromoteParticipant(ctx, participant.ID, userID)
+		if err != nil {
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: "❌ Erreur lors de l'acceptation du participant.",
+					Flags:   discordgo.MessageFlagsEphemeral,
+				},
+			})
+			return
+		}
+		participant = promoted
+	}
+
+	sendDM(s, participant.UserID, fmt.Sprintf("✅ **L'organisateur de %s t'a accepté !** Ta participation est confirmée.", event.Title))
+	grantPrivateChannelAccess(s, event.PrivateChannelID, participant.UserID)
+
+	h.updateEmbed(ctx, s, event.ChannelID, event.MessageID)
+
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
@@ -326,6 +348,7 @@ func (h *Handler) HandleOrganizerRefuse(s *discordgo.Session, i *discordgo.Inter
 	}
 	event, _ := h.eventUseCase.GetEventByID(ctx, participant.EventID)
 	if event != nil {
+		revokePrivateChannelAccess(s, event.PrivateChannelID, participant.UserID)
 		_ = s.MessageReactionRemove(event.ChannelID, event.MessageID, reactionJoinEmoji, participant.UserID)
 		ch, _ := s.UserChannelCreate(participant.UserID)
 		if ch != nil {

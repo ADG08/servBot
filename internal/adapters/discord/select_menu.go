@@ -92,6 +92,9 @@ func (h *Handler) HandlePromote(s *discordgo.Session, i *discordgo.InteractionCr
 	event, _ := h.eventUseCase.GetEventByID(ctx, participant.EventID)
 	if event != nil {
 		sendDM(s, participant.UserID, fmt.Sprintf("🎉 **Bonne nouvelle !** Tu as été promu pour **%s** par l'organisateur !", event.Title))
+		if event.IsFinalized() {
+			grantPrivateChannelAccess(s, event.PrivateChannelID, participant.UserID)
+		}
 		h.updateEmbed(ctx, s, event.ChannelID, event.MessageID)
 	}
 	respondEphemeral(s, i.Interaction, fmt.Sprintf("✅ %s a été promu de la liste d'attente !", participant.Username))
@@ -164,10 +167,8 @@ func (h *Handler) HandleRemove(s *discordgo.Session, i *discordgo.InteractionCre
 
 	event, _ := h.eventUseCase.GetEventByID(ctx, participant.EventID)
 	if event != nil {
-		luckyWinner, err := h.participantUseCase.GetNextWaitlistParticipant(ctx, event.ID)
-		if err == nil {
-			sendDM(s, luckyWinner.UserID, fmt.Sprintf("🎉 **Bonne nouvelle !** Une place s'est libérée pour **%s**, tu es maintenant parmi les confirmés !", event.Title))
-		}
+		revokePrivateChannelAccess(s, event.PrivateChannelID, participant.UserID)
+		h.promoteNextFromWaitlist(s, ctx, event)
 		h.updateEmbed(ctx, s, event.ChannelID, event.MessageID)
 	}
 	respondEphemeral(s, i.Interaction, fmt.Sprintf("✅ %s a été retiré de l'événement.", participant.Username))

@@ -2,6 +2,10 @@ package entities
 
 import "time"
 
+func (e *Event) IsFinalized() bool {
+	return !e.OrganizerStep1FinalizedAt.IsZero()
+}
+
 type Event struct {
 	ID                          uint
 	MessageID                   string

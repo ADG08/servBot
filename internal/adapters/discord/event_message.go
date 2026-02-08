@@ -25,6 +25,27 @@ func sanitizeChannelName(title string) string {
 	return s
 }
 
+func grantPrivateChannelAccess(s *discordgo.Session, channelID, userID string) {
+	if channelID == "" || userID == "" {
+		return
+	}
+	err := s.ChannelPermissionSet(channelID, userID, discordgo.PermissionOverwriteTypeMember,
+		discordgo.PermissionViewChannel|discordgo.PermissionSendMessages, 0)
+	if err != nil {
+		log.Printf("❌ Ajout accès salon privé (channel=%s, user=%s): %v", channelID, userID, err)
+	}
+}
+
+func revokePrivateChannelAccess(s *discordgo.Session, channelID, userID string) {
+	if channelID == "" || userID == "" {
+		return
+	}
+	err := s.ChannelPermissionDelete(channelID, userID)
+	if err != nil {
+		log.Printf("❌ Retrait accès salon privé (channel=%s, user=%s): %v", channelID, userID, err)
+	}
+}
+
 func (h *Handler) updateEmbed(ctx context.Context, s *discordgo.Session, channelID, messageID string) {
 	event, err := h.eventUseCase.GetEventByMessageID(ctx, messageID)
 	if err != nil {
@@ -45,8 +66,7 @@ func (h *Handler) updateEmbed(ctx context.Context, s *discordgo.Session, channel
 	newEmbed := *origMsg.Embeds[0]
 	pkgdiscord.UpdateEventEmbed(&newEmbed, event, confirmedCount, waitlistCount)
 
-	finalized := !event.OrganizerStep1FinalizedAt.IsZero()
-	components := h.buildComponents(messageID, waitlistCount, confirmedCount, finalized)
+	components := h.buildComponents(messageID, waitlistCount, confirmedCount, event.IsFinalized())
 
 	embeds := []*discordgo.MessageEmbed{&newEmbed}
 	if _, err := s.ChannelMessageEditComplex(&discordgo.MessageEdit{
