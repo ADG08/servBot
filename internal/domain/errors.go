@@ -13,4 +13,5 @@ var (
 	ErrNoWaitlistParticipant   = errors.New("aucun participant en liste d'attente")
 	ErrCannotReduceSlots       = errors.New("impossible de réduire le nombre de places")
 	ErrNotOrganizer            = errors.New("seul l'organisateur peut effectuer cette action")
+	ErrEventAlreadyFinalized   = errors.New("cette sortie est déjà finalisée")
 )

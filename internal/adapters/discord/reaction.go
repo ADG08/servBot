@@ -78,7 +78,6 @@ func (h *Handler) HandleReactionLeave(s *discordgo.Session, channelID, messageID
 	}
 	wasConfirmed, err := h.participantUseCase.LeaveEvent(ctx, event.ID, userID)
 	if err != nil {
-		sendDM(s, userID, "Tu ne faisais pas partie des intéressés.")
 		return
 	}
 	msg := "🗑️ Tu t'es désisté."
