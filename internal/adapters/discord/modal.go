@@ -88,8 +88,6 @@ func (h *Handler) HandleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 	}
 	overwrites := []*discordgo.PermissionOverwrite{
 		{ID: guildID, Type: discordgo.PermissionOverwriteTypeRole, Deny: discordgo.PermissionViewChannel},
-		{ID: creatorID, Type: discordgo.PermissionOverwriteTypeMember, Allow: discordgo.PermissionViewChannel | discordgo.PermissionSendMessages},
-		{ID: botID, Type: discordgo.PermissionOverwriteTypeMember, Allow: discordgo.PermissionViewChannel | discordgo.PermissionSendMessages},
 	}
 	privChannelName := sanitizeChannelName(title)
 	if privChannelName == "" {
@@ -111,6 +109,8 @@ func (h *Handler) HandleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 		})
 		return
 	}
+	grantPrivateChannelAccess(s, privCh.ID, creatorID)
+	grantPrivateChannelAccess(s, privCh.ID, botID)
 
 	_, _ = s.ChannelMessageSend(privCh.ID, "💬 Salon privé pour cette sortie. Les questions des participants te seront relayées ici par le bot (thread **Questions**).")
 
@@ -161,7 +161,7 @@ func (h *Handler) HandleEditEvent(s *discordgo.Session, i *discordgo.Interaction
 		respondEphemeral(s, i.Interaction, "❌ Seul l'organisateur peut modifier la sortie.")
 		return
 	}
-	if !event.OrganizerStep1FinalizedAt.IsZero() {
+	if event.IsFinalized() {
 		respondEphemeral(s, i.Interaction, "🔒 Cette sortie est verrouillée (étape 1 finalisée). Aucune modification n'est possible.")
 		return
 	}
