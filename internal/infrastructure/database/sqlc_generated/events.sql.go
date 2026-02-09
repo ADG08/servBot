@@ -166,6 +166,32 @@ func (q *Queries) GetEventByMessageID(ctx context.Context, messageID string) (Ev
 	return i, err
 }
 
+const getEventByPrivateChannelID = `-- name: GetEventByPrivateChannelID :one
+SELECT id, message_id, channel_id, creator_id, title, description, max_slots, scheduled_at, private_channel_id, questions_thread_id, organizer_validation_dm_sent_at, organizer_step1_finalized_at, created_at, updated_at FROM events WHERE private_channel_id = $1
+`
+
+func (q *Queries) GetEventByPrivateChannelID(ctx context.Context, privateChannelID string) (Event, error) {
+	row := q.db.QueryRow(ctx, getEventByPrivateChannelID, privateChannelID)
+	var i Event
+	err := row.Scan(
+		&i.ID,
+		&i.MessageID,
+		&i.ChannelID,
+		&i.CreatorID,
+		&i.Title,
+		&i.Description,
+		&i.MaxSlots,
+		&i.ScheduledAt,
+		&i.PrivateChannelID,
+		&i.QuestionsThreadID,
+		&i.OrganizerValidationDmSentAt,
+		&i.OrganizerStep1FinalizedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getEventsByCreatorID = `-- name: GetEventsByCreatorID :many
 SELECT id, message_id, channel_id, creator_id, title, description, max_slots, scheduled_at, private_channel_id, questions_thread_id, organizer_validation_dm_sent_at, organizer_step1_finalized_at, created_at, updated_at FROM events WHERE creator_id = $1 ORDER BY created_at DESC
 `

@@ -182,6 +182,12 @@ func (h *Handler) HandleOrganizerFinalizeStep1(s *discordgo.Session, i *discordg
 	}
 	userID := interactionUserID(i)
 
+	// Acknowledge immediately to avoid the 3-second timeout.
+	_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{Flags: discordgo.MessageFlagsEphemeral},
+	})
+
 	event, err := h.eventUseCase.FinalizeOrganizerStep1(ctx, uint(eventID), userID)
 	if err != nil {
 		msg := "❌ Erreur lors de la finalisation."
@@ -191,10 +197,7 @@ func (h *Handler) HandleOrganizerFinalizeStep1(s *discordgo.Session, i *discordg
 		case errors.Is(err, domain.ErrEventAlreadyFinalized):
 			msg = "ℹ️ Cette sortie a déjà été finalisée."
 		}
-		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{Content: msg, Flags: discordgo.MessageFlagsEphemeral},
-		})
+		s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{Content: msg, Flags: discordgo.MessageFlagsEphemeral})
 		return
 	}
 
@@ -222,12 +225,9 @@ func (h *Handler) HandleOrganizerFinalizeStep1(s *discordgo.Session, i *discordg
 
 	h.updateEmbed(ctx, s, event.ChannelID, event.MessageID)
 
-	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: "✅ Étape 1 finalisée ! Les participants confirmés ont été notifiés et l'événement a été ajouté au calendrier Discord.",
-			Flags:   discordgo.MessageFlagsEphemeral,
-		},
+	s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+		Content: "✅ Étape 1 finalisée ! Les participants confirmés ont été notifiés et l'événement a été ajouté au calendrier Discord.",
+		Flags:   discordgo.MessageFlagsEphemeral,
 	})
 }
 

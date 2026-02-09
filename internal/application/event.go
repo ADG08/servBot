@@ -52,6 +52,10 @@ func (s *EventService) GetEventByID(ctx context.Context, id uint) (*entities.Eve
 	return s.eventRepo.FindByID(ctx, id)
 }
 
+func (s *EventService) GetEventByPrivateChannelID(ctx context.Context, privateChannelID string) (*entities.Event, error) {
+	return s.eventRepo.FindByPrivateChannelID(ctx, privateChannelID)
+}
+
 func (s *EventService) UpdateEvent(ctx context.Context, event *entities.Event) error {
 	confirmedCount, err := s.participantRepo.CountByEventIDAndStatus(ctx, event.ID, domain.StatusConfirmed)
 	if err != nil {
