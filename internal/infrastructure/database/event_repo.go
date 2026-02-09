@@ -71,6 +71,18 @@ func (r *EventRepository) FindByID(ctx context.Context, id uint) (*entities.Even
 	return &e, nil
 }
 
+func (r *EventRepository) FindByPrivateChannelID(ctx context.Context, privateChannelID string) (*entities.Event, error) {
+	row, err := r.q.GetEventByPrivateChannelID(ctx, privateChannelID)
+	if err != nil {
+		return nil, fmt.Errorf("get event by private channel id: %w", err)
+	}
+	e := eventToDomain(row)
+	if err := r.attachParticipants(ctx, &e); err != nil {
+		return nil, err
+	}
+	return &e, nil
+}
+
 func (r *EventRepository) attachParticipants(ctx context.Context, e *entities.Event) error {
 	participants, err := r.q.GetParticipantsByEventID(ctx, int64(e.ID))
 	if err != nil {

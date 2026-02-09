@@ -57,6 +57,8 @@ func (b *Bot) handleInteraction(s *discordgo.Session, i *discordgo.InteractionCr
 			b.handler.HandleCommand(s, i)
 		case "sortie-template":
 			b.handler.HandleTemplateCommand(s, i)
+		case "retirer":
+			b.handler.HandleRemoveCommand(s, i)
 		}
 	case discordgo.InteractionModalSubmit:
 		modalData := i.ModalSubmitData()
@@ -90,8 +92,8 @@ func (b *Bot) handleInteraction(s *discordgo.Session, i *discordgo.InteractionCr
 			switch customID {
 			case "select_promote":
 				b.handler.HandlePromote(s, i)
-			case "select_remove":
-				b.handler.HandleRemove(s, i)
+			case "select_remove_user":
+				b.handler.HandleRemoveUserSelect(s, i)
 			}
 		}
 	}
@@ -150,6 +152,10 @@ func (b *Bot) Start() error {
 		{
 			Name:        "sortie-template",
 			Description: "Ouvrir le formulaire de sortie pré-rempli pour le debug",
+		},
+		{
+			Name:        "retirer",
+			Description: "Retirer un membre d'une sortie (à utiliser dans le salon privé)",
 		},
 	}
 

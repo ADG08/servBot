@@ -35,5 +35,8 @@ UPDATE events SET
     updated_at = NOW()
 WHERE id = $1;
 
+-- name: GetEventByPrivateChannelID :one
+SELECT * FROM events WHERE private_channel_id = $1;
+
 -- name: DeleteEvent :exec
 DELETE FROM events WHERE id = $1;
