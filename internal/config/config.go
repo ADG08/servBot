@@ -26,7 +26,7 @@ func Load() *Config {
 
 	forumChannelID := os.Getenv("FORUM_CHANNEL_ID")
 	if forumChannelID == "" {
-		forumChannelID = "1464818337388167389"
+		log.Fatal("FORUM_CHANNEL_ID n'est pas défini dans le fichier .env")
 	}
 
 	guildID := os.Getenv("GUILD_ID")
