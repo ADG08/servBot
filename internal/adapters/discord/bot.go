@@ -172,7 +172,7 @@ func (b *Bot) Start() error {
 		}
 	}
 
-	go b.handler.RunOrganizerValidationScheduler(b.session)
+	go b.handler.RunScheduledTasks(b.session)
 
 	fmt.Println("🤖 Bot en ligne ! Appuyez sur CTRL+C pour quitter.")
 	stop := make(chan os.Signal, 1)

@@ -7,6 +7,7 @@ import (
 
 	"servbot/internal/domain"
 	"servbot/internal/domain/entities"
+	"servbot/pkg/tz"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -28,7 +29,7 @@ func buildDescriptionBase(organizerMention, description string, scheduledAt time
 	b.WriteString(fmt.Sprintf("**Organisé par :** %s\n\n", organizerMention))
 	b.WriteString(description)
 	if !scheduledAt.IsZero() {
-		b.WriteString(fmt.Sprintf("\n\n**Quand :** %s", FormatEventDateTime(scheduledAt)))
+		b.WriteString(fmt.Sprintf("\n\n**Quand :** %s", scheduledAt.In(tz.Paris).Format("02/01/2006 à 15:04")))
 	}
 	b.WriteString(fmt.Sprintf("\n\n**Places :** %s", placesText))
 	if waitlistCount > 0 {

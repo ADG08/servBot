@@ -66,7 +66,7 @@ func (h *Handler) updateEmbed(ctx context.Context, s *discordgo.Session, channel
 	newEmbed := *origMsg.Embeds[0]
 	pkgdiscord.UpdateEventEmbed(&newEmbed, event, confirmedCount, waitlistCount)
 
-	components := h.buildComponents(messageID, waitlistCount, confirmedCount, event.IsFinalized())
+	components := h.buildComponents(messageID, waitlistCount, confirmedCount, event.IsEditLocked())
 
 	embeds := []*discordgo.MessageEmbed{&newEmbed}
 	if _, err := s.ChannelMessageEditComplex(&discordgo.MessageEdit{
@@ -79,9 +79,9 @@ func (h *Handler) updateEmbed(ctx context.Context, s *discordgo.Session, channel
 	}
 }
 
-func (h *Handler) buildComponents(messageID string, waitlistCount, confirmedCount int, finalized bool) []discordgo.MessageComponent {
+func (h *Handler) buildComponents(messageID string, waitlistCount, confirmedCount int, editLocked bool) []discordgo.MessageComponent {
 	var rowComponents []discordgo.MessageComponent
-	if !finalized {
+	if !editLocked {
 		rowComponents = append(rowComponents, discordgo.Button{Label: "✏️ Modifier la sortie", Style: discordgo.SecondaryButton, CustomID: fmt.Sprintf("btn_edit_event_%s", messageID)})
 	}
 	if waitlistCount > 0 {

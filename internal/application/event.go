@@ -57,6 +57,9 @@ func (s *EventService) GetEventByPrivateChannelID(ctx context.Context, privateCh
 }
 
 func (s *EventService) UpdateEvent(ctx context.Context, event *entities.Event) error {
+	if event.IsEditLocked() {
+		return domain.ErrEventAlreadyFinalized
+	}
 	confirmedCount, err := s.participantRepo.CountByEventIDAndStatus(ctx, event.ID, domain.StatusConfirmed)
 	if err != nil {
 		return fmt.Errorf("count confirmed: %w", err)
@@ -77,6 +80,10 @@ func (s *EventService) GetConfirmedParticipants(ctx context.Context, eventID uin
 
 func (s *EventService) GetEventsByCreatorID(ctx context.Context, creatorID string) ([]entities.Event, error) {
 	return s.eventRepo.FindByCreatorID(ctx, creatorID)
+}
+
+func (s *EventService) FindStartedNonFinalizedEvents(ctx context.Context, now time.Time) ([]entities.Event, error) {
+	return s.eventRepo.FindStartedNonFinalizedEvents(ctx, now)
 }
 
 func (s *EventService) EventsNeedingH48OrganizerDM(ctx context.Context, now time.Time) ([]entities.Event, error) {

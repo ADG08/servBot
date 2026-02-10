@@ -14,6 +14,7 @@ type EventRepository interface {
 	FindByPrivateChannelID(ctx context.Context, privateChannelID string) (*entities.Event, error)
 	FindByCreatorID(ctx context.Context, creatorID string) ([]entities.Event, error)
 	FindEventsNeedingH48OrganizerDM(ctx context.Context, now time.Time) ([]entities.Event, error)
+	FindStartedNonFinalizedEvents(ctx context.Context, now time.Time) ([]entities.Event, error)
 	Update(ctx context.Context, event *entities.Event) error
 	MarkOrganizerValidationDMSent(ctx context.Context, eventID uint) error
 	MarkOrganizerStep1Finalized(ctx context.Context, eventID uint) error
