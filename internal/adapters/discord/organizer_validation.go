@@ -27,6 +27,10 @@ func isCasB(eventScheduledAt time.Time, now time.Time) bool {
 	return !eventScheduledAt.IsZero() && eventScheduledAt.After(now) && eventScheduledAt.Sub(now) <= organizerValidationWindow
 }
 
+func shouldGrantPrivateChannelOnPromote(event *entities.Event, now time.Time) bool {
+	return event != nil && event.PrivateChannelID != "" && (event.IsFinalized() || isCasB(event.ScheduledAt, now))
+}
+
 func (h *Handler) messageLink(channelID, messageID string) string {
 	if h.guildID == "" || channelID == "" || messageID == "" {
 		return ""
@@ -293,7 +297,7 @@ func (h *Handler) HandleOrganizerAccept(s *discordgo.Session, i *discordgo.Inter
 	}
 
 	if participant.Status == domain.StatusWaitlist {
-		promoted, err := h.participantUseCase.PromoteParticipant(ctx, participant.ID, userID)
+		promoted, _, err := h.participantUseCase.PromoteParticipant(ctx, participant.ID, userID)
 		if err != nil {
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,

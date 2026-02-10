@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"servbot/internal/domain"
 	"servbot/internal/domain/entities"
@@ -27,6 +28,42 @@ func parseParticipantID(value, prefix string) (uint, bool) {
 
 // ── Waitlist (promote) ──────────────────────────────────────────────────────
 
+const maxSelectOptions = 25  // limite Discord par menu
+const maxSelectMenus = 5     // 5×25 = 125 max en un message
+const maxSelectLabelLen = 100
+
+func displayAndUsername(s *discordgo.Session, guildID, userID, fallback string) (display, username string) {
+	display = fallback
+	username = fallback
+	if guildID == "" {
+		return display, username
+	}
+	member, err := s.GuildMember(guildID, userID)
+	if err != nil || member == nil || member.User == nil {
+		return display, username
+	}
+	username = member.User.Username
+	display = resolveDisplayName(member)
+	if display == "" {
+		display = username
+	}
+	return display, username
+}
+
+func truncateLabel(s string, max int) string {
+	if len(s) <= max {
+		return s
+	}
+	return s[:max-3] + "..."
+}
+
+func waitlistOptionLabel(display, username string) string {
+	if display == username {
+		return display
+	}
+	return display + " • " + username
+}
+
 func (h *Handler) HandleManageWaitlist(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	ctx := context.Background()
 	event, err := h.eventUseCase.GetEventByMessageID(ctx, i.Message.ID)
@@ -45,15 +82,19 @@ func (h *Handler) HandleManageWaitlist(s *discordgo.Session, i *discordgo.Intera
 		return
 	}
 
+	content := "**Liste d'attente** — Choisissez qui faire monter :"
+
 	options := make([]discordgo.SelectMenuOption, 0, len(waitlistParticipants))
 	for _, p := range waitlistParticipants {
 		if p.ID == 0 {
 			continue
 		}
+		display, username := displayAndUsername(s, h.guildID, p.UserID, p.Username)
+		label := truncateLabel(waitlistOptionLabel(display, username), maxSelectLabelLen)
 		options = append(options, discordgo.SelectMenuOption{
-			Label:       p.Username,
+			Label:       label,
 			Value:       fmt.Sprintf("promote_%d", p.ID),
-			Description: fmt.Sprintf("Promouvoir %s de la liste d'attente", p.Username),
+			Description: "Faire monter",
 		})
 	}
 
@@ -62,22 +103,32 @@ func (h *Handler) HandleManageWaitlist(s *discordgo.Session, i *discordgo.Intera
 		return
 	}
 
+	var components []discordgo.MessageComponent
+	for i := 0; i < maxSelectMenus && i*maxSelectOptions < len(options); i++ {
+		start := i * maxSelectOptions
+		end := min(start+maxSelectOptions, len(options))
+		chunk := options[start:end]
+		components = append(components, discordgo.ActionsRow{
+			Components: []discordgo.MessageComponent{
+				discordgo.SelectMenu{
+					CustomID:    fmt.Sprintf("select_promote_%d", i),
+					Placeholder: fmt.Sprintf("Faire monter un membre (%d–%d)", start+1, end),
+					Options:     chunk,
+				},
+			},
+		})
+	}
+
+	if len(options) > maxSelectOptions*maxSelectMenus {
+		content += fmt.Sprintf("\n\n_(Seuls les %d premiers sont dans les menus ; rouvrez « Gérer la liste d'attente » après des promotions pour voir la suite.)_", maxSelectOptions*maxSelectMenus)
+	}
+
 	_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
-			Content: "Choisissez une personne à promouvoir :",
-			Flags:   discordgo.MessageFlagsEphemeral,
-			Components: []discordgo.MessageComponent{
-				discordgo.ActionsRow{
-					Components: []discordgo.MessageComponent{
-						discordgo.SelectMenu{
-							CustomID:    "select_promote",
-							Placeholder: "Sélectionner une personne à promouvoir",
-							Options:     options,
-						},
-					},
-				},
-			},
+			Content:    content,
+			Flags:      discordgo.MessageFlagsEphemeral,
+			Components: components,
 		},
 	})
 }
@@ -86,30 +137,46 @@ func (h *Handler) HandlePromote(s *discordgo.Session, i *discordgo.InteractionCr
 	ctx := context.Background()
 	data := i.MessageComponentData()
 	if len(data.Values) == 0 {
+		respondEphemeral(s, i.Interaction, "❌ Aucune sélection.")
 		return
 	}
 	participantID, ok := parseParticipantID(data.Values[0], "promote_")
 	if !ok {
+		respondEphemeral(s, i.Interaction, "❌ Sélection invalide.")
 		return
 	}
 
-	participant, err := h.participantUseCase.PromoteParticipant(ctx, participantID, i.Member.User.ID)
+	participant, quotaIncreased, err := h.participantUseCase.PromoteParticipant(ctx, participantID, i.Member.User.ID)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotOrganizer) {
-			respondEphemeral(s, i.Interaction, "❌ Seul l'organisateur peut promouvoir des participants.")
+		var msg string
+		switch {
+		case errors.Is(err, domain.ErrNotOrganizer):
+			msg = "❌ Seul l'organisateur peut faire monter des participants."
+		case errors.Is(err, domain.ErrParticipantNotWaitlist):
+			msg = "❌ Ce participant n'est plus en liste d'attente."
+		case errors.Is(err, domain.ErrParticipantNotFound):
+			msg = "❌ Participant introuvable."
+		default:
+			msg = "❌ Erreur lors de la promotion."
 		}
+		respondEphemeral(s, i.Interaction, msg)
 		return
 	}
 
 	event, _ := h.eventUseCase.GetEventByID(ctx, participant.EventID)
 	if event != nil {
 		sendDM(s, participant.UserID, fmt.Sprintf("🎉 **Bonne nouvelle !** Tu as été promu pour **%s** par l'organisateur !", event.Title))
-		if event.IsFinalized() {
+		if shouldGrantPrivateChannelOnPromote(event, time.Now()) {
 			grantPrivateChannelAccess(s, event.PrivateChannelID, participant.UserID)
 		}
 		h.updateEmbed(ctx, s, event.ChannelID, event.MessageID)
 	}
-	respondEphemeral(s, i.Interaction, fmt.Sprintf("✅ %s a été promu de la liste d'attente !", participant.Username))
+
+	msg := fmt.Sprintf("✅ **%s** a été fait monter de la liste d'attente.", participant.Username)
+	if quotaIncreased {
+		msg += " Le nombre de places a été augmenté de 1 automatiquement."
+	}
+	respondEphemeral(s, i.Interaction, msg)
 }
 
 // ── Remove participants ─────────────────────────────────────────────────────
@@ -126,10 +193,12 @@ func (h *Handler) respondRemoveSelect(ctx context.Context, s *discordgo.Session,
 		if p.UserID == event.CreatorID {
 			continue
 		}
+		display, username := displayAndUsername(s, h.guildID, p.UserID, p.Username)
+		label := truncateLabel(waitlistOptionLabel(display, username), maxSelectLabelLen)
 		options = append(options, discordgo.SelectMenuOption{
-			Label:       p.Username,
+			Label:       label,
 			Value:       fmt.Sprintf("remove_%d", p.ID),
-			Description: fmt.Sprintf("Retirer %s de la sortie", p.Username),
+			Description: "Retirer de la sortie",
 		})
 	}
 
