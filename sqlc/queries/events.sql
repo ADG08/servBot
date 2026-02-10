@@ -35,6 +35,13 @@ UPDATE events SET
     updated_at = NOW()
 WHERE id = $1;
 
+-- name: FindStartedNonFinalizedEvents :many
+SELECT * FROM events
+WHERE scheduled_at IS NOT NULL
+  AND scheduled_at <= $1
+  AND scheduled_at > $1 - interval '1 hour'
+  AND organizer_step1_finalized_at IS NULL;
+
 -- name: GetEventByPrivateChannelID :one
 SELECT * FROM events WHERE private_channel_id = $1;
 

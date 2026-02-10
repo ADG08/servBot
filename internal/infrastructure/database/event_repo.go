@@ -119,6 +119,18 @@ func (r *EventRepository) FindEventsNeedingH48OrganizerDM(ctx context.Context, n
 	return out, nil
 }
 
+func (r *EventRepository) FindStartedNonFinalizedEvents(ctx context.Context, now time.Time) ([]entities.Event, error) {
+	rows, err := r.q.FindStartedNonFinalizedEvents(ctx, pgtype.Timestamptz{Time: now, Valid: true})
+	if err != nil {
+		return nil, fmt.Errorf("find started non-finalized events: %w", err)
+	}
+	out := make([]entities.Event, len(rows))
+	for i := range rows {
+		out[i] = eventToDomain(rows[i])
+	}
+	return out, nil
+}
+
 func (r *EventRepository) MarkOrganizerValidationDMSent(ctx context.Context, eventID uint) error {
 	if err := r.q.MarkOrganizerValidationDMSent(ctx, int64(eventID)); err != nil {
 		return fmt.Errorf("mark organizer validation DM sent: %w", err)

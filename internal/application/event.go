@@ -82,6 +82,10 @@ func (s *EventService) GetEventsByCreatorID(ctx context.Context, creatorID strin
 	return s.eventRepo.FindByCreatorID(ctx, creatorID)
 }
 
+func (s *EventService) FindStartedNonFinalizedEvents(ctx context.Context, now time.Time) ([]entities.Event, error) {
+	return s.eventRepo.FindStartedNonFinalizedEvents(ctx, now)
+}
+
 func (s *EventService) EventsNeedingH48OrganizerDM(ctx context.Context, now time.Time) ([]entities.Event, error) {
 	return s.eventRepo.FindEventsNeedingH48OrganizerDM(ctx, now)
 }

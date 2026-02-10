@@ -17,6 +17,7 @@ type EventUseCase interface {
 	GetConfirmedParticipants(ctx context.Context, eventID uint) ([]entities.Participant, error)
 	GetEventsByCreatorID(ctx context.Context, creatorID string) ([]entities.Event, error)
 	EventsNeedingH48OrganizerDM(ctx context.Context, now time.Time) ([]entities.Event, error)
+	FindStartedNonFinalizedEvents(ctx context.Context, now time.Time) ([]entities.Event, error)
 	MarkOrganizerValidationDMSent(ctx context.Context, eventID uint) error
 	FinalizeOrganizerStep1(ctx context.Context, eventID uint, creatorID string) (*entities.Event, error)
 }

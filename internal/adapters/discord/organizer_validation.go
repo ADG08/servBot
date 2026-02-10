@@ -366,30 +366,35 @@ func (h *Handler) HandleOrganizerRefuse(s *discordgo.Session, i *discordgo.Inter
 	})
 }
 
-func (h *Handler) RunOrganizerValidationScheduler(s *discordgo.Session) {
-	ticker := time.NewTicker(10 * time.Minute)
-	defer ticker.Stop()
-	ctx := context.Background()
-	for range ticker.C {
-		now := time.Now()
-		events, err := h.eventUseCase.EventsNeedingH48OrganizerDM(ctx, now)
-		if err != nil {
-			log.Printf("❌ Scheduler H-48: %v", err)
+func (h *Handler) processH48OrganizerDMs(s *discordgo.Session, ctx context.Context, now time.Time) {
+	events, err := h.eventUseCase.EventsNeedingH48OrganizerDM(ctx, now)
+	if err != nil {
+		log.Printf("❌ Scheduler H-48: %v", err)
+		return
+	}
+	for _, e := range events {
+		eventFull, err := h.eventUseCase.GetEventByID(ctx, e.ID)
+		if err != nil || eventFull == nil {
 			continue
 		}
-		for _, e := range events {
-			eventFull, err := h.eventUseCase.GetEventByID(ctx, e.ID)
-			if err != nil || eventFull == nil {
-				continue
-			}
-			evWP := eventToEventWithParticipants(eventFull)
-			if err := h.sendOrganizerValidationDM(s, evWP); err != nil {
-				log.Printf("❌ Envoi MP H-48 organisateur (event %d): %v", e.ID, err)
-				continue
-			}
-			if err := h.eventUseCase.MarkOrganizerValidationDMSent(ctx, e.ID); err != nil {
-				log.Printf("❌ MarkOrganizerValidationDMSent (event %d): %v", e.ID, err)
-			}
+		evWP := eventToEventWithParticipants(eventFull)
+		if err := h.sendOrganizerValidationDM(s, evWP); err != nil {
+			log.Printf("❌ Envoi MP H-48 organisateur (event %d): %v", e.ID, err)
+			continue
 		}
+		if err := h.eventUseCase.MarkOrganizerValidationDMSent(ctx, e.ID); err != nil {
+			log.Printf("❌ MarkOrganizerValidationDMSent (event %d): %v", e.ID, err)
+		}
+	}
+}
+
+func (h *Handler) processEditLock(s *discordgo.Session, ctx context.Context, now time.Time) {
+	started, err := h.eventUseCase.FindStartedNonFinalizedEvents(ctx, now)
+	if err != nil {
+		log.Printf("❌ Scheduler edit-lock: %v", err)
+		return
+	}
+	for _, e := range started {
+		h.updateEmbed(ctx, s, e.ChannelID, e.MessageID)
 	}
 }

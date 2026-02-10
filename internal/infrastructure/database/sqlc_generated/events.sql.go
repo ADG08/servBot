@@ -114,6 +114,49 @@ func (q *Queries) FindEventsNeedingH48OrganizerDM(ctx context.Context, scheduled
 	return items, nil
 }
 
+const findStartedNonFinalizedEvents = `-- name: FindStartedNonFinalizedEvents :many
+SELECT id, message_id, channel_id, creator_id, title, description, max_slots, scheduled_at, private_channel_id, questions_thread_id, organizer_validation_dm_sent_at, organizer_step1_finalized_at, created_at, updated_at FROM events
+WHERE scheduled_at IS NOT NULL
+  AND scheduled_at <= $1
+  AND scheduled_at > $1 - interval '1 hour'
+  AND organizer_step1_finalized_at IS NULL
+`
+
+func (q *Queries) FindStartedNonFinalizedEvents(ctx context.Context, scheduledAt pgtype.Timestamptz) ([]Event, error) {
+	rows, err := q.db.Query(ctx, findStartedNonFinalizedEvents, scheduledAt)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Event
+	for rows.Next() {
+		var i Event
+		if err := rows.Scan(
+			&i.ID,
+			&i.MessageID,
+			&i.ChannelID,
+			&i.CreatorID,
+			&i.Title,
+			&i.Description,
+			&i.MaxSlots,
+			&i.ScheduledAt,
+			&i.PrivateChannelID,
+			&i.QuestionsThreadID,
+			&i.OrganizerValidationDmSentAt,
+			&i.OrganizerStep1FinalizedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getEventByID = `-- name: GetEventByID :one
 SELECT id, message_id, channel_id, creator_id, title, description, max_slots, scheduled_at, private_channel_id, questions_thread_id, organizer_validation_dm_sent_at, organizer_step1_finalized_at, created_at, updated_at FROM events WHERE id = $1
 `
