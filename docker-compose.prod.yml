@@ -1,5 +1,5 @@
 # Production: make prod-up ou docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-# .env doit contenir: TOKEN, POSTGRES_PASSWORD, et optionnellement FORUM_CHANNEL_ID, POSTGRES_USER, POSTGRES_DB
+# .env doit contenir: TOKEN, FORUM_CHANNEL_ID, POSTGRES_PASSWORD, et optionnellement POSTGRES_USER, POSTGRES_DB
 
 services:
   postgres:
