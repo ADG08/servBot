@@ -81,6 +81,10 @@ func (b *Bot) handleInteraction(s *discordgo.Session, i *discordgo.InteractionCr
 			}
 		} else if strings.HasPrefix(customID, "btn_") {
 			switch {
+			case strings.HasPrefix(customID, "btn_ask_question_"):
+				b.handler.HandleAskQuestion(s, i)
+			case strings.HasPrefix(customID, "btn_answer_question_"):
+				b.handler.HandleAnswerQuestion(s, i)
 			case strings.HasPrefix(customID, "btn_manage_waitlist_"):
 				b.handler.HandleManageWaitlist(s, i)
 			case strings.HasPrefix(customID, "btn_remove_participant_"):

@@ -84,6 +84,11 @@ func (h *Handler) buildComponents(messageID string, waitlistCount, confirmedCoun
 	if !editLocked {
 		rowComponents = append(rowComponents, discordgo.Button{Label: "✏️ Modifier la sortie", Style: discordgo.SecondaryButton, CustomID: fmt.Sprintf("btn_edit_event_%s", messageID)})
 	}
+	rowComponents = append(rowComponents, discordgo.Button{
+		Label:    "❓ Poser une question",
+		Style:    discordgo.SecondaryButton,
+		CustomID: fmt.Sprintf("btn_ask_question_%s", messageID),
+	})
 	if waitlistCount > 0 {
 		rowComponents = append(rowComponents, discordgo.Button{Label: "⚙️ Gérer la liste d'attente", Style: discordgo.SecondaryButton, CustomID: fmt.Sprintf("btn_manage_waitlist_%s", messageID)})
 	}
