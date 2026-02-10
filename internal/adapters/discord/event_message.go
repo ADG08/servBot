@@ -79,25 +79,28 @@ func (h *Handler) updateEmbed(ctx context.Context, s *discordgo.Session, channel
 	}
 }
 
+const buttonsPerRow = 2
+
 func (h *Handler) buildComponents(messageID string, waitlistCount, confirmedCount int, editLocked bool) []discordgo.MessageComponent {
-	var rowComponents []discordgo.MessageComponent
+	var buttons []discordgo.MessageComponent
 	if !editLocked {
-		rowComponents = append(rowComponents, discordgo.Button{Label: "✏️ Modifier la sortie", Style: discordgo.SecondaryButton, CustomID: fmt.Sprintf("btn_edit_event_%s", messageID)})
+		buttons = append(buttons, discordgo.Button{Label: "✏️ Modifier la sortie", Style: discordgo.SecondaryButton, CustomID: fmt.Sprintf("btn_edit_event_%s", messageID)})
 	}
-	rowComponents = append(rowComponents, discordgo.Button{
+	buttons = append(buttons, discordgo.Button{
 		Label:    "❓ Poser une question",
 		Style:    discordgo.SecondaryButton,
 		CustomID: fmt.Sprintf("btn_ask_question_%s", messageID),
 	})
 	if waitlistCount > 0 {
-		rowComponents = append(rowComponents, discordgo.Button{Label: "⚙️ Gérer la liste d'attente", Style: discordgo.SecondaryButton, CustomID: fmt.Sprintf("btn_manage_waitlist_%s", messageID)})
+		buttons = append(buttons, discordgo.Button{Label: "⚙️ Gérer la liste d'attente", Style: discordgo.SecondaryButton, CustomID: fmt.Sprintf("btn_manage_waitlist_%s", messageID)})
 	}
 	if confirmedCount > 0 {
-		rowComponents = append(rowComponents, discordgo.Button{Label: "🗑️ Retirer un participant", Style: discordgo.DangerButton, CustomID: fmt.Sprintf("btn_remove_participant_%s", messageID)})
+		buttons = append(buttons, discordgo.Button{Label: "🗑️ Retirer un participant", Style: discordgo.DangerButton, CustomID: fmt.Sprintf("btn_remove_participant_%s", messageID)})
 	}
 	var components []discordgo.MessageComponent
-	if len(rowComponents) > 0 {
-		components = append(components, discordgo.ActionsRow{Components: rowComponents})
+	for i := 0; i < len(buttons); i += buttonsPerRow {
+		end := min(i+buttonsPerRow, len(buttons))
+		components = append(components, discordgo.ActionsRow{Components: buttons[i:end]})
 	}
 	return components
 }

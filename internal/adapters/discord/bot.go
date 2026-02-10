@@ -93,11 +93,11 @@ func (b *Bot) handleInteraction(s *discordgo.Session, i *discordgo.InteractionCr
 				b.handler.HandleEditEvent(s, i)
 			}
 		} else {
-			switch customID {
-			case "select_promote":
-				b.handler.HandlePromote(s, i)
-			case "select_remove_user":
+			switch {
+			case customID == "select_remove_user":
 				b.handler.HandleRemoveUserSelect(s, i)
+			case strings.HasPrefix(customID, "select_promote"):
+				b.handler.HandlePromote(s, i)
 			}
 		}
 	}

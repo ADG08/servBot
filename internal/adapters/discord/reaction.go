@@ -65,7 +65,7 @@ func (h *Handler) HandleReactionJoin(s *discordgo.Session, channelID, messageID,
 		}
 	} else if isCasB(event.ScheduledAt, now) {
 		participant, _ := h.participantUseCase.GetParticipantByEventIDAndUserID(ctx, event.ID, userID)
-		if participant != nil {
+		if participant != nil && participant.Status == domain.StatusConfirmed {
 			if err := h.sendOrganizerAcceptRefuseDM(s, event.Title, event.CreatorID, channelID, messageID, participant); err != nil {
 				log.Printf("❌ Envoi MP Accepter/Refuser organisateur (Cas B): %v", err)
 			}
@@ -81,7 +81,7 @@ func (h *Handler) promoteNextFromWaitlist(s *discordgo.Session, ctx context.Cont
 		return
 	}
 	sendDM(s, luckyWinner.UserID, fmt.Sprintf("🎉 **Bonne nouvelle !** Une place s'est libérée pour **%s**, tu es maintenant parmi les confirmés !", event.Title))
-	if event.IsFinalized() {
+	if shouldGrantPrivateChannelOnPromote(event, time.Now()) {
 		grantPrivateChannelAccess(s, event.PrivateChannelID, luckyWinner.UserID)
 	}
 }

@@ -11,7 +11,7 @@ type ParticipantUseCase interface {
 	LeaveEvent(ctx context.Context, eventID uint, userID string) (bool, error)
 	GetParticipantByEventIDAndUserID(ctx context.Context, eventID uint, userID string) (*entities.Participant, error)
 	GetParticipantByID(ctx context.Context, id uint) (*entities.Participant, error)
-	PromoteParticipant(ctx context.Context, participantID uint, creatorID string) (*entities.Participant, error)
+	PromoteParticipant(ctx context.Context, participantID uint, creatorID string) (*entities.Participant, bool, error)
 	RemoveParticipant(ctx context.Context, participantID uint, creatorID string) (*entities.Participant, error)
 	GetNextWaitlistParticipant(ctx context.Context, eventID uint) (*entities.Participant, error)
 }

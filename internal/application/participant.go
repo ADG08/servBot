@@ -81,36 +81,39 @@ func (s *ParticipantService) LeaveEvent(ctx context.Context, eventID uint, userI
 	return wasConfirmed, nil
 }
 
-func (s *ParticipantService) PromoteParticipant(ctx context.Context, participantID uint, creatorID string) (*entities.Participant, error) {
+// PromoteParticipant promotes a waitlist participant to confirmed; if the event was full, MaxSlots is increased by 1.
+func (s *ParticipantService) PromoteParticipant(ctx context.Context, participantID uint, creatorID string) (*entities.Participant, bool, error) {
 	participant, err := s.participantRepo.FindByID(ctx, participantID)
 	if err != nil {
-		return nil, domain.ErrParticipantNotFound
+		return nil, false, domain.ErrParticipantNotFound
 	}
 	if participant.Status != domain.StatusWaitlist {
-		return nil, domain.ErrParticipantNotWaitlist
+		return nil, false, domain.ErrParticipantNotWaitlist
 	}
 	event, err := s.eventRepo.FindByID(ctx, participant.EventID)
 	if err != nil {
-		return nil, domain.ErrEventNotFound
+		return nil, false, domain.ErrEventNotFound
 	}
 	if event.CreatorID != creatorID {
-		return nil, domain.ErrNotOrganizer
+		return nil, false, domain.ErrNotOrganizer
 	}
 	confirmedCount, err := s.participantRepo.CountByEventIDAndStatus(ctx, event.ID, domain.StatusConfirmed)
 	if err != nil {
-		return nil, fmt.Errorf("count confirmed: %w", err)
+		return nil, false, fmt.Errorf("count confirmed: %w", err)
 	}
+	quotaIncreased := false
 	if event.MaxSlots > 0 && int(confirmedCount) >= event.MaxSlots {
 		event.MaxSlots = int(confirmedCount) + 1
 		if err := s.eventRepo.Update(ctx, event); err != nil {
-			return nil, fmt.Errorf("update event: %w", err)
+			return nil, false, fmt.Errorf("update event: %w", err)
 		}
+		quotaIncreased = true
 	}
 	participant.Status = domain.StatusConfirmed
 	if err := s.participantRepo.Update(ctx, participant); err != nil {
-		return nil, fmt.Errorf("update participant: %w", err)
+		return nil, false, fmt.Errorf("update participant: %w", err)
 	}
-	return participant, nil
+	return participant, quotaIncreased, nil
 }
 
 func (s *ParticipantService) RemoveParticipant(ctx context.Context, participantID uint, creatorID string) (*entities.Participant, error) {
