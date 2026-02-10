@@ -91,6 +91,8 @@ func (b *Bot) handleInteraction(s *discordgo.Session, i *discordgo.InteractionCr
 				b.handler.HandleRemoveParticipant(s, i)
 			case strings.HasPrefix(customID, "btn_edit_event_"):
 				b.handler.HandleEditEvent(s, i)
+			case strings.HasPrefix(customID, "btn_toggle_waitlist_"):
+				b.handler.HandleToggleWaitlistMode(s, i)
 			}
 		} else {
 			switch {

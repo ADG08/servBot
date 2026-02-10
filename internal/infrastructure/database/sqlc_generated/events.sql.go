@@ -12,9 +12,9 @@ import (
 )
 
 const createEvent = `-- name: CreateEvent :one
-INSERT INTO events (message_id, channel_id, creator_id, title, description, max_slots, scheduled_at, private_channel_id, questions_thread_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-RETURNING id, message_id, channel_id, creator_id, title, description, max_slots, scheduled_at, private_channel_id, questions_thread_id, organizer_validation_dm_sent_at, organizer_step1_finalized_at, created_at, updated_at
+INSERT INTO events (message_id, channel_id, creator_id, title, description, max_slots, scheduled_at, private_channel_id, questions_thread_id, waitlist_auto)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+RETURNING id, message_id, channel_id, creator_id, title, description, max_slots, scheduled_at, private_channel_id, questions_thread_id, waitlist_auto, organizer_validation_dm_sent_at, organizer_step1_finalized_at, created_at, updated_at
 `
 
 type CreateEventParams struct {
@@ -27,6 +27,7 @@ type CreateEventParams struct {
 	ScheduledAt       pgtype.Timestamptz
 	PrivateChannelID  string
 	QuestionsThreadID string
+	WaitlistAuto      bool
 }
 
 func (q *Queries) CreateEvent(ctx context.Context, arg CreateEventParams) (Event, error) {
@@ -40,6 +41,7 @@ func (q *Queries) CreateEvent(ctx context.Context, arg CreateEventParams) (Event
 		arg.ScheduledAt,
 		arg.PrivateChannelID,
 		arg.QuestionsThreadID,
+		arg.WaitlistAuto,
 	)
 	var i Event
 	err := row.Scan(
@@ -53,6 +55,7 @@ func (q *Queries) CreateEvent(ctx context.Context, arg CreateEventParams) (Event
 		&i.ScheduledAt,
 		&i.PrivateChannelID,
 		&i.QuestionsThreadID,
+		&i.WaitlistAuto,
 		&i.OrganizerValidationDmSentAt,
 		&i.OrganizerStep1FinalizedAt,
 		&i.CreatedAt,
@@ -71,7 +74,7 @@ func (q *Queries) DeleteEvent(ctx context.Context, id int64) error {
 }
 
 const findEventsNeedingH48OrganizerDM = `-- name: FindEventsNeedingH48OrganizerDM :many
-SELECT id, message_id, channel_id, creator_id, title, description, max_slots, scheduled_at, private_channel_id, questions_thread_id, organizer_validation_dm_sent_at, organizer_step1_finalized_at, created_at, updated_at FROM events
+SELECT id, message_id, channel_id, creator_id, title, description, max_slots, scheduled_at, private_channel_id, questions_thread_id, waitlist_auto, organizer_validation_dm_sent_at, organizer_step1_finalized_at, created_at, updated_at FROM events
 WHERE scheduled_at IS NOT NULL
   AND scheduled_at > $1
   AND scheduled_at - interval '48 hours' <= $1
@@ -99,6 +102,7 @@ func (q *Queries) FindEventsNeedingH48OrganizerDM(ctx context.Context, scheduled
 			&i.ScheduledAt,
 			&i.PrivateChannelID,
 			&i.QuestionsThreadID,
+			&i.WaitlistAuto,
 			&i.OrganizerValidationDmSentAt,
 			&i.OrganizerStep1FinalizedAt,
 			&i.CreatedAt,
@@ -115,7 +119,7 @@ func (q *Queries) FindEventsNeedingH48OrganizerDM(ctx context.Context, scheduled
 }
 
 const findStartedNonFinalizedEvents = `-- name: FindStartedNonFinalizedEvents :many
-SELECT id, message_id, channel_id, creator_id, title, description, max_slots, scheduled_at, private_channel_id, questions_thread_id, organizer_validation_dm_sent_at, organizer_step1_finalized_at, created_at, updated_at FROM events
+SELECT id, message_id, channel_id, creator_id, title, description, max_slots, scheduled_at, private_channel_id, questions_thread_id, waitlist_auto, organizer_validation_dm_sent_at, organizer_step1_finalized_at, created_at, updated_at FROM events
 WHERE scheduled_at IS NOT NULL
   AND scheduled_at <= $1
   AND scheduled_at > $1 - interval '1 hour'
@@ -142,6 +146,7 @@ func (q *Queries) FindStartedNonFinalizedEvents(ctx context.Context, scheduledAt
 			&i.ScheduledAt,
 			&i.PrivateChannelID,
 			&i.QuestionsThreadID,
+			&i.WaitlistAuto,
 			&i.OrganizerValidationDmSentAt,
 			&i.OrganizerStep1FinalizedAt,
 			&i.CreatedAt,
@@ -158,7 +163,7 @@ func (q *Queries) FindStartedNonFinalizedEvents(ctx context.Context, scheduledAt
 }
 
 const getEventByID = `-- name: GetEventByID :one
-SELECT id, message_id, channel_id, creator_id, title, description, max_slots, scheduled_at, private_channel_id, questions_thread_id, organizer_validation_dm_sent_at, organizer_step1_finalized_at, created_at, updated_at FROM events WHERE id = $1
+SELECT id, message_id, channel_id, creator_id, title, description, max_slots, scheduled_at, private_channel_id, questions_thread_id, waitlist_auto, organizer_validation_dm_sent_at, organizer_step1_finalized_at, created_at, updated_at FROM events WHERE id = $1
 `
 
 func (q *Queries) GetEventByID(ctx context.Context, id int64) (Event, error) {
@@ -175,6 +180,7 @@ func (q *Queries) GetEventByID(ctx context.Context, id int64) (Event, error) {
 		&i.ScheduledAt,
 		&i.PrivateChannelID,
 		&i.QuestionsThreadID,
+		&i.WaitlistAuto,
 		&i.OrganizerValidationDmSentAt,
 		&i.OrganizerStep1FinalizedAt,
 		&i.CreatedAt,
@@ -184,7 +190,7 @@ func (q *Queries) GetEventByID(ctx context.Context, id int64) (Event, error) {
 }
 
 const getEventByMessageID = `-- name: GetEventByMessageID :one
-SELECT id, message_id, channel_id, creator_id, title, description, max_slots, scheduled_at, private_channel_id, questions_thread_id, organizer_validation_dm_sent_at, organizer_step1_finalized_at, created_at, updated_at FROM events WHERE message_id = $1
+SELECT id, message_id, channel_id, creator_id, title, description, max_slots, scheduled_at, private_channel_id, questions_thread_id, waitlist_auto, organizer_validation_dm_sent_at, organizer_step1_finalized_at, created_at, updated_at FROM events WHERE message_id = $1
 `
 
 func (q *Queries) GetEventByMessageID(ctx context.Context, messageID string) (Event, error) {
@@ -201,6 +207,7 @@ func (q *Queries) GetEventByMessageID(ctx context.Context, messageID string) (Ev
 		&i.ScheduledAt,
 		&i.PrivateChannelID,
 		&i.QuestionsThreadID,
+		&i.WaitlistAuto,
 		&i.OrganizerValidationDmSentAt,
 		&i.OrganizerStep1FinalizedAt,
 		&i.CreatedAt,
@@ -210,7 +217,7 @@ func (q *Queries) GetEventByMessageID(ctx context.Context, messageID string) (Ev
 }
 
 const getEventByPrivateChannelID = `-- name: GetEventByPrivateChannelID :one
-SELECT id, message_id, channel_id, creator_id, title, description, max_slots, scheduled_at, private_channel_id, questions_thread_id, organizer_validation_dm_sent_at, organizer_step1_finalized_at, created_at, updated_at FROM events WHERE private_channel_id = $1
+SELECT id, message_id, channel_id, creator_id, title, description, max_slots, scheduled_at, private_channel_id, questions_thread_id, waitlist_auto, organizer_validation_dm_sent_at, organizer_step1_finalized_at, created_at, updated_at FROM events WHERE private_channel_id = $1
 `
 
 func (q *Queries) GetEventByPrivateChannelID(ctx context.Context, privateChannelID string) (Event, error) {
@@ -227,6 +234,7 @@ func (q *Queries) GetEventByPrivateChannelID(ctx context.Context, privateChannel
 		&i.ScheduledAt,
 		&i.PrivateChannelID,
 		&i.QuestionsThreadID,
+		&i.WaitlistAuto,
 		&i.OrganizerValidationDmSentAt,
 		&i.OrganizerStep1FinalizedAt,
 		&i.CreatedAt,
@@ -236,7 +244,7 @@ func (q *Queries) GetEventByPrivateChannelID(ctx context.Context, privateChannel
 }
 
 const getEventsByCreatorID = `-- name: GetEventsByCreatorID :many
-SELECT id, message_id, channel_id, creator_id, title, description, max_slots, scheduled_at, private_channel_id, questions_thread_id, organizer_validation_dm_sent_at, organizer_step1_finalized_at, created_at, updated_at FROM events WHERE creator_id = $1 ORDER BY created_at DESC
+SELECT id, message_id, channel_id, creator_id, title, description, max_slots, scheduled_at, private_channel_id, questions_thread_id, waitlist_auto, organizer_validation_dm_sent_at, organizer_step1_finalized_at, created_at, updated_at FROM events WHERE creator_id = $1 ORDER BY created_at DESC
 `
 
 func (q *Queries) GetEventsByCreatorID(ctx context.Context, creatorID string) ([]Event, error) {
@@ -259,6 +267,7 @@ func (q *Queries) GetEventsByCreatorID(ctx context.Context, creatorID string) ([
 			&i.ScheduledAt,
 			&i.PrivateChannelID,
 			&i.QuestionsThreadID,
+			&i.WaitlistAuto,
 			&i.OrganizerValidationDmSentAt,
 			&i.OrganizerStep1FinalizedAt,
 			&i.CreatedAt,
@@ -298,16 +307,18 @@ UPDATE events SET
     description = $3,
     max_slots = $4,
     scheduled_at = $5,
+    waitlist_auto = $6,
     updated_at = NOW()
 WHERE id = $1
 `
 
 type UpdateEventParams struct {
-	ID          int64
-	Title       string
-	Description string
-	MaxSlots    int32
-	ScheduledAt pgtype.Timestamptz
+	ID           int64
+	Title        string
+	Description  string
+	MaxSlots     int32
+	ScheduledAt  pgtype.Timestamptz
+	WaitlistAuto bool
 }
 
 func (q *Queries) UpdateEvent(ctx context.Context, arg UpdateEventParams) error {
@@ -317,6 +328,7 @@ func (q *Queries) UpdateEvent(ctx context.Context, arg UpdateEventParams) error 
 		arg.Description,
 		arg.MaxSlots,
 		arg.ScheduledAt,
+		arg.WaitlistAuto,
 	)
 	return err
 }

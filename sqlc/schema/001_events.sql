@@ -9,6 +9,7 @@ CREATE TABLE events (
     scheduled_at TIMESTAMPTZ,
     private_channel_id TEXT NOT NULL DEFAULT '',
     questions_thread_id TEXT NOT NULL DEFAULT '',
+    waitlist_auto BOOLEAN NOT NULL DEFAULT TRUE,
     organizer_validation_dm_sent_at TIMESTAMPTZ,
     organizer_step1_finalized_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
