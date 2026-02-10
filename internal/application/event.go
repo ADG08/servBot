@@ -57,6 +57,9 @@ func (s *EventService) GetEventByPrivateChannelID(ctx context.Context, privateCh
 }
 
 func (s *EventService) UpdateEvent(ctx context.Context, event *entities.Event) error {
+	if event.IsEditLocked() {
+		return domain.ErrEventAlreadyFinalized
+	}
 	confirmedCount, err := s.participantRepo.CountByEventIDAndStatus(ctx, event.ID, domain.StatusConfirmed)
 	if err != nil {
 		return fmt.Errorf("count confirmed: %w", err)

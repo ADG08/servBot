@@ -11,6 +11,7 @@ import (
 	"servbot/internal/domain"
 	"servbot/internal/domain/entities"
 	pkgdiscord "servbot/pkg/discord"
+	"servbot/pkg/tz"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -161,8 +162,8 @@ func (h *Handler) HandleEditEvent(s *discordgo.Session, i *discordgo.Interaction
 		respondEphemeral(s, i.Interaction, "❌ Seul l'organisateur peut modifier la sortie.")
 		return
 	}
-	if event.IsFinalized() {
-		respondEphemeral(s, i.Interaction, "🔒 Cette sortie est verrouillée (étape 1 finalisée). Aucune modification n'est possible.")
+	if event.IsEditLocked() {
+		respondEphemeral(s, i.Interaction, "🔒 Cette sortie est verrouillée. Aucune modification n'est possible.")
 		return
 	}
 
@@ -170,11 +171,11 @@ func (h *Handler) HandleEditEvent(s *discordgo.Session, i *discordgo.Interaction
 	if event.MaxSlots > 0 {
 		slotsValue = fmt.Sprintf("%d", event.MaxSlots)
 	}
-	dateValue := ""
-	timeValue := ""
+	dateValue, timeValue := "", ""
 	if !event.ScheduledAt.IsZero() {
-		dateValue = event.ScheduledAt.Format("02/01/2006")
-		timeValue = event.ScheduledAt.Format("15:04")
+		t := event.ScheduledAt.In(tz.Paris)
+		dateValue = t.Format("02/01/2006")
+		timeValue = t.Format("15:04")
 	}
 
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -232,6 +233,10 @@ func (h *Handler) HandleEditModalSubmit(s *discordgo.Session, i *discordgo.Inter
 		respondEphemeral(s, i.Interaction, "❌ Seul l'organisateur peut modifier la sortie.")
 		return
 	}
+	if event.IsEditLocked() {
+		respondEphemeral(s, i.Interaction, "🔒 Cette sortie est verrouillée. Aucune modification n'est possible.")
+		return
+	}
 
 	event.Title = title
 	event.Description = desc
@@ -241,13 +246,16 @@ func (h *Handler) HandleEditModalSubmit(s *discordgo.Session, i *discordgo.Inter
 	}
 
 	if err := h.eventUseCase.UpdateEvent(ctx, event); err != nil {
-		if errors.Is(err, domain.ErrCannotReduceSlots) {
+		switch {
+		case errors.Is(err, domain.ErrEventAlreadyFinalized):
+			respondEphemeral(s, i.Interaction, "🔒 Cette sortie est verrouillée. Aucune modification n'est possible.")
+		case errors.Is(err, domain.ErrCannotReduceSlots):
 			confirmedParticipants, _ := h.eventUseCase.GetConfirmedParticipants(ctx, event.ID)
 			respondEphemeral(s, i.Interaction, fmt.Sprintf("❌ Impossible de réduire à %d places : il y a déjà %d participants confirmés. Retirez d'abord des participants.", slots, len(confirmedParticipants)))
-			return
+		default:
+			log.Printf("❌ Erreur lors de la mise à jour de l'événement: %v", err)
+			respondEphemeral(s, i.Interaction, "❌ Erreur lors de la mise à jour.")
 		}
-		log.Printf("❌ Erreur lors de la mise à jour de l'événement: %v", err)
-		respondEphemeral(s, i.Interaction, "❌ Erreur lors de la mise à jour.")
 		return
 	}
 

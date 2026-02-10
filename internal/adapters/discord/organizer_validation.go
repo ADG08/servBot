@@ -12,6 +12,7 @@ import (
 	"servbot/internal/domain"
 	"servbot/internal/domain/entities"
 	pkgdiscord "servbot/pkg/discord"
+	"servbot/pkg/tz"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -48,7 +49,7 @@ func (h *Handler) buildOrganizerTriDMContent(event *eventWithParticipants) strin
 		b.WriteString(fmt.Sprintf("**Tri pour la sortie : %s**\n\n", event.Title))
 	}
 	if !event.ScheduledAt.IsZero() {
-		b.WriteString(fmt.Sprintf("📅 %s\n\n", pkgdiscord.FormatEventDateTime(event.ScheduledAt)))
+		b.WriteString(fmt.Sprintf("📅 %s\n\n", event.ScheduledAt.In(tz.Paris).Format("02/01/2006 à 15:04")))
 	}
 	if len(confirmed) > 0 {
 		b.WriteString("✅ **Potentiels intéressés confirmés :**\n")
@@ -212,7 +213,7 @@ func (h *Handler) HandleOrganizerFinalizeStep1(s *discordgo.Session, i *discordg
 			dmContent = fmt.Sprintf("🎉 **Ta participation à %s est confirmée !**", event.Title)
 		}
 		if !event.ScheduledAt.IsZero() {
-			dmContent += fmt.Sprintf("\n📅 %s", pkgdiscord.FormatEventDateTime(event.ScheduledAt))
+			dmContent += fmt.Sprintf("\n📅 %s", event.ScheduledAt.In(tz.Paris).Format("02/01/2006 à 15:04"))
 		}
 		dmContent += "\nÀ bientôt !"
 		sendDM(s, p.UserID, dmContent)

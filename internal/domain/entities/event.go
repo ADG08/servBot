@@ -6,6 +6,15 @@ func (e *Event) IsFinalized() bool {
 	return !e.OrganizerStep1FinalizedAt.IsZero()
 }
 
+func (e *Event) HasStarted() bool {
+	return !e.ScheduledAt.IsZero() && e.ScheduledAt.Before(time.Now())
+}
+
+// Cas A: finalisé ; Cas B: sortie commencée.
+func (e *Event) IsEditLocked() bool {
+	return e.IsFinalized() || e.HasStarted()
+}
+
 type Event struct {
 	ID                          uint
 	MessageID                   string
