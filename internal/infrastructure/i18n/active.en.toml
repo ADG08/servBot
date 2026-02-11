@@ -1,0 +1,347 @@
+[errors.generic]
+other = "❌ An error occurred."
+
+[success.generic]
+other = "✅ Operation successful."
+
+[errors.event_not_found]
+other = "❌ Event not found."
+
+[errors.event_locked]
+other = "🔒 This event is locked. No further changes are possible."
+
+[errors.only_organizer_can_edit]
+other = "❌ Only the organizer can edit this event."
+
+[errors.only_organizer_can_manage_waitlist]
+other = "❌ Only the organizer can manage the waitlist."
+
+[errors.only_organizer_can_remove]
+other = "❌ Only the organizer can remove participants."
+
+[errors.only_organizer_can_accept]
+other = "❌ Only the organizer can accept."
+
+[errors.only_organizer_can_accept_candidate]
+other = "❌ Only the organizer can accept this candidate."
+
+[errors.only_organizer_can_refuse_candidate]
+other = "❌ Only the organizer can refuse this candidate."
+
+[errors.cannot_reduce_slots]
+other = "❌ Cannot reduce to {{.Slots}} slots: there are already {{.ConfirmedCount}} confirmed participants. Remove participants first."
+
+[errors.invalid_slots]
+other = "❌ Invalid number of slots (must be positive or empty)."
+
+[errors.datetime_required]
+other = "❌ Date and time are required (DD/MM/YYYY and HH:MM)."
+
+[errors.datetime_in_past]
+other = "❌ Date and time must be in the future."
+
+[dm.join.already_interested]
+other = "ℹ️ You have already expressed interest."
+
+[dm.join.already_waitlist]
+other = "ℹ️ You are already on the waitlist."
+
+[dm.join.confirmed]
+other = "✅ You have been added to the event!"
+
+[dm.join.waitlist_full]
+other = "⚠️ Full! You have been added to the **waitlist**."
+
+[dm.join.waitlist_forced]
+other = "⚠️ You are on the **waitlist**. The organizer will validate registrations."
+
+[dm.leave.confirmed]
+other = "🗑️ You have withdrawn from the event."
+
+[dm.removed_by_organizer]
+other = "🚪 You have been removed from the event **{{.EventTitle}}** by the organizer."
+
+[dm.waitlist.promoted_auto]
+other = "🎉 **Good news!** A spot opened up for **{{.EventTitle}}**, you are now confirmed!"
+
+[dm.waitlist.promoted_by_organizer]
+other = "🎉 **Good news!** You have been promoted for **{{.EventTitle}}** by the organizer!"
+
+[errors.question_event_not_found]
+other = "❌ Could not find the event for this question."
+
+[errors.question_thread_unavailable]
+other = "❌ The private questions thread is not available for this event."
+
+[errors.question_only_organizer_can_answer]
+other = "❌ Only the organizer can answer this question."
+
+[errors.question_invalid_event_id]
+other = "❌ Invalid event ID for the question."
+
+[errors.question_required]
+other = "❌ Please enter a question."
+
+[errors.question_member_unknown]
+other = "❌ Could not identify the member asking the question."
+
+[errors.question_send_failed]
+other = "❌ Could not send the question to the organizer."
+
+[success.question_sent]
+other = "✅ Your question has been sent to the organizer."
+
+[errors.answer_invalid_payload]
+other = "❌ Invalid answer data."
+
+[errors.answer_invalid_event_id]
+other = "❌ Invalid event ID for the answer."
+
+[errors.answer_required]
+other = "❌ Please enter an answer."
+
+[errors.answer_event_not_found]
+other = "❌ Could not find the event for this answer."
+
+[success.answer_sent]
+other = "✅ Answer sent via DM to the member."
+
+[info.waitlist.empty]
+other = "ℹ️ There is nobody on the waitlist."
+
+[info.no_confirmed_to_remove]
+other = "ℹ️ There are no confirmed participants to remove."
+
+[errors.no_selection]
+other = "❌ No selection."
+
+[errors.invalid_selection]
+other = "❌ Invalid selection."
+
+[errors.no_participant_removed]
+other = "❌ No participant could be removed."
+
+[success.participant_promoted]
+other = "✅ **{{.Username}}** has been promoted from the waitlist."
+
+[success.participant_promoted_with_quota]
+other = "✅ **{{.Username}}** has been promoted from the waitlist. The number of slots was automatically increased by 1."
+
+[success.participant_removed_single]
+other = "✅ {{.Mention}} has been removed from the event."
+
+[success.participant_removed_many]
+other = "✅ {{.Count}} participants removed: {{.Mentions}}"
+
+[errors.finalize_generic]
+other = "❌ Error while finalizing."
+
+[errors.finalize_only_organizer]
+other = "❌ Only the organizer of this event can finalize step 1."
+
+[errors.finalize_already_done]
+other = "ℹ️ This event has already been finalized."
+
+[success.finalize_step1]
+other = "✅ Step 1 finalized! Confirmed participants have been notified and the event has been added to the Discord calendar."
+
+[errors.toggle_waitlist_only_organizer]
+other = "❌ Only the organizer can change the waitlist mode."
+
+[errors.toggle_waitlist_locked]
+other = "🔒 This event is locked. The waitlist mode can no longer be changed."
+
+[errors.toggle_waitlist_update_failed]
+other = "❌ Error while updating the waitlist mode."
+
+[success.toggle_waitlist]
+other = "✅ Waitlist mode: **{{.Mode}}**."
+
+[info.create_forum_post]
+other = "📌 Creating the forum post..."
+
+[errors.participant_not_waitlist]
+other = "❌ This participant is no longer on the waitlist."
+
+[errors.participant_not_found]
+other = "❌ Participant not found."
+
+[errors.remove_command_wrong_channel]
+other = "❌ This command must be used in the event's private channel."
+
+[dm.finalize_confirmed_with_link]
+other = "🎉 **Your participation in [{{.EventTitle}}]({{.Link}}) is confirmed!**"
+
+[dm.finalize_confirmed_no_link]
+other = "🎉 **Your participation in {{.EventTitle}} is confirmed!**"
+
+[dm.finalize_confirmed_footer]
+other = "\nSee you soon!"
+
+[dm.organizer_accepted]
+other = "✅ **The organizer of {{.EventTitle}} has accepted you!** Your participation is confirmed."
+
+[dm.organizer_refused]
+other = "The organizer of **{{.EventTitle}}** has refused your registration."
+
+[success.organizer_refused]
+other = "✅ {{.Username}} has been refused and removed from the event."
+
+[info.ask_question_organizer]
+other = "As the organizer, you receive questions in the **Questions** thread of the private channel; no need to ask yourself one."
+
+[info.no_promotion_done]
+other = "No promotion performed."
+
+[info.private_channel_intro]
+other = "💬 Private channel for this event. Participants' questions will be relayed here by the bot (thread **Questions**)."
+
+[info.questions_thread_intro]
+other = "Participants' questions will be relayed here by the bot."
+
+# ── UI: organizer DMs, buttons, calendar ──
+[ui.dm_organizer_tri_title_link]
+other = "**Sort event:** [{{.EventTitle}}]({{.Link}})\n\n"
+[ui.dm_organizer_tri_title]
+other = "**Sort event: {{.EventTitle}}**\n\n"
+[ui.dm_organizer_tri_date]
+other = "📅 {{.Date}}\n\n"
+[ui.dm_organizer_tri_confirmed_header]
+other = "✅ **Confirmed interested:**\n"
+[ui.dm_organizer_tri_waitlist_header]
+other = "⏳ **Waitlist:**\n"
+[ui.dm_organizer_tri_footer]
+other = "\nClick **Finalize step 1** when you have validated the list."
+[ui.btn_finalize_step1]
+other = "Finalize step 1"
+[ui.dm_organizer_new_registration_link]
+other = "**New registration for:** [{{.EventTitle}}]({{.Link}})\n\n<@{{.UserID}}> ({{.Username}}) has expressed interest.\n\nAccept or refuse this candidate?"
+[ui.dm_organizer_new_registration]
+other = "**New registration for: {{.EventTitle}}**\n\n<@{{.UserID}}> ({{.Username}}) has expressed interest.\n\nAccept or refuse this candidate?"
+[ui.btn_accept]
+other = "Accept"
+[ui.btn_refuse]
+other = "Refuse"
+[ui.dm_waitlist_slot_freed_link]
+other = "**A spot opened for:** [{{.EventTitle}}]({{.Link}})\n\nPromote <@{{.UserID}}> ({{.Username}}) from the waitlist?"
+[ui.dm_waitlist_slot_freed]
+other = "**A spot opened for: {{.EventTitle}}**\n\nPromote <@{{.UserID}}> ({{.Username}}) from the waitlist?"
+[ui.btn_ignore]
+other = "Ignore"
+[ui.calendar_location_placeholder]
+other = "See event details"
+[ui.dm_date_line]
+other = "📅 {{.Date}}"
+
+# ── UI: waitlist / remove ──
+[ui.waitlist_manage_intro]
+other = "**Waitlist** — Choose who to promote:"
+[ui.waitlist_option_promote]
+other = "Promote"
+[ui.waitlist_placeholder_range]
+other = "Promote a member ({{.Start}}–{{.End}})"
+[ui.waitlist_manage_truncated]
+other = "\n\n_(Only the first {{.Max}} are in the menus; reopen « Manage waitlist » after promotions to see more.)_"
+[ui.remove_select_intro]
+other = "Select member(s) to remove from the event:"
+[ui.remove_option_description]
+other = "Remove from event"
+[ui.remove_placeholder]
+other = "Choose one or more members"
+
+# ── UI: question / answer modals ──
+[ui.modal_ask_question_title]
+other = "Ask a question"
+[ui.modal_ask_question_label]
+other = "Your question"
+[ui.modal_ask_question_placeholder]
+other = "E.g. Where exactly do we meet?"
+[ui.modal_answer_title]
+other = "Your answer"
+[ui.modal_answer_label]
+other = "Your answer"
+[ui.modal_answer_placeholder]
+other = "Your answer will be sent by DM to the member."
+[ui.question_thread_ask_suffix]
+other = " asks:\n"
+[ui.btn_reply]
+other = "Reply"
+[ui.dm_answer_header_link]
+other = "✉️ **[{{.EventTitle}}]({{.Link}})** – Organizer's answer\n\n"
+[ui.dm_answer_header]
+other = "✉️ **{{.EventTitle}}** – Organizer's answer\n\n"
+[ui.dm_answer_your_question]
+other = "**Your question:**\n"
+[ui.dm_answer_label]
+other = "**Answer:**\n"
+
+# ── UI: create / edit event modal ──
+[ui.placeholder_title]
+other = "E.g. Dinner, Movie, Game night..."
+[ui.placeholder_desc]
+other = "Location, address, practical info..."
+[ui.placeholder_date]
+other = "E.g. 15/02/2026 (day/month/year)"
+[ui.placeholder_time]
+other = "E.g. 14:00 or 18:30"
+[ui.placeholder_slots]
+other = "E.g. 4 or empty = unlimited"
+[ui.template_title_default]
+other = "Test event"
+[ui.template_desc_default]
+other = "Test location, address, info..."
+[ui.template_date_default]
+other = "01/01/2030"
+[ui.template_time_default]
+other = "18:00"
+[ui.template_slots_default]
+other = "4"
+[ui.modal_create_event_title]
+other = "Create an event"
+[ui.modal_create_event_template_title]
+other = "Create an event (template)"
+[ui.label_title]
+other = "Title"
+[ui.label_details]
+other = "Details (Location, etc.)"
+[ui.label_date]
+other = "Date"
+[ui.label_time]
+other = "Time"
+[ui.label_slots]
+other = "Number of spots"
+[ui.modal_edit_event_title]
+other = "Edit event"
+[ui.default_private_channel_name]
+other = "event"
+
+# ── UI: embed buttons ──
+[ui.btn_edit_event]
+other = "✏️ Edit event"
+[ui.btn_ask_question]
+other = "❓ Ask a question"
+[ui.btn_waitlist_auto]
+other = "⏳ Auto"
+[ui.btn_waitlist_manual]
+other = "⏳ Manual"
+[ui.btn_manage_waitlist]
+other = "⚙️ Manage waitlist"
+[ui.btn_remove_participant]
+other = "🗑️ Remove a participant"
+
+# ── Slash commands ──
+[cmd.sortie.description]
+other = "Create a new event"
+[cmd.sortie_template.description]
+other = "Open the pre-filled event form for debugging"
+[cmd.retirer.description]
+other = "Remove a member from an event (use in the event's private channel)"
+
+# ── Event creation errors ──
+[errors.create_forum_failed]
+other = "Error creating the post (Check that the Bot has 'Send messages' and 'Create threads' permissions)."
+[errors.create_private_channel_failed]
+other = "❌ Forum post created but error creating the private channel. Check the bot's permissions (Manage channels)."
+[errors.create_event_save_failed]
+other = "❌ Error saving the event."
+

@@ -63,22 +63,22 @@ func (h *Handler) HandleToggleWaitlistMode(s *discordgo.Session, i *discordgo.In
 
 	event, err := h.eventUseCase.GetEventByMessageID(ctx, msgID)
 	if err != nil || event == nil {
-		respondEphemeral(s, i.Interaction, "❌ Événement non trouvé.")
+		respondEphemeral(s, i.Interaction, h.translate("errors.event_not_found", nil))
 		return
 	}
 	if event.CreatorID != userID {
-		respondEphemeral(s, i.Interaction, "❌ Seul l'organisateur peut changer le mode de liste d'attente.")
+		respondEphemeral(s, i.Interaction, h.translate("errors.toggle_waitlist_only_organizer", nil))
 		return
 	}
 	if event.IsEditLocked() {
-		respondEphemeral(s, i.Interaction, "🔒 Cette sortie est verrouillée. Le mode de liste d'attente ne peut plus être modifié.")
+		respondEphemeral(s, i.Interaction, h.translate("errors.toggle_waitlist_locked", nil))
 		return
 	}
 
 	event.WaitlistAuto = !event.WaitlistAuto
 	if err := h.eventUseCase.UpdateEvent(ctx, event); err != nil {
 		log.Printf("❌ Erreur lors du changement de mode waitlist: %v", err)
-		respondEphemeral(s, i.Interaction, "❌ Erreur lors de la mise à jour du mode de liste d'attente.")
+		respondEphemeral(s, i.Interaction, h.translate("errors.toggle_waitlist_update_failed", nil))
 		return
 	}
 
@@ -89,7 +89,9 @@ func (h *Handler) HandleToggleWaitlistMode(s *discordgo.Session, i *discordgo.In
 	if !event.WaitlistAuto {
 		modeLabel = "manuel"
 	}
-	respondEphemeral(s, i.Interaction, fmt.Sprintf("✅ Mode liste d'attente: **%s**.", modeLabel))
+	respondEphemeral(s, i.Interaction, h.translate("success.toggle_waitlist", map[string]any{
+		"Mode": modeLabel,
+	}))
 }
 
 func (h *Handler) updateEmbed(ctx context.Context, s *discordgo.Session, channelID, messageID string) {
@@ -130,20 +132,18 @@ const buttonsPerRow = 2
 func (h *Handler) buildComponents(event *entities.Event, waitlistCount, confirmedCount int) []discordgo.MessageComponent {
 	var buttons []discordgo.MessageComponent
 	if !event.IsEditLocked() {
-		buttons = append(buttons, discordgo.Button{Label: "✏️ Modifier la sortie", Style: discordgo.SecondaryButton, CustomID: fmt.Sprintf("btn_edit_event_%s", event.MessageID)})
+		buttons = append(buttons, discordgo.Button{Label: h.translate("ui.btn_edit_event", nil), Style: discordgo.SecondaryButton, CustomID: fmt.Sprintf("btn_edit_event_%s", event.MessageID)})
 	}
 	buttons = append(buttons, discordgo.Button{
-		Label:    "❓ Poser une question",
+		Label:    h.translate("ui.btn_ask_question", nil),
 		Style:    discordgo.SecondaryButton,
 		CustomID: fmt.Sprintf("btn_ask_question_%s", event.MessageID),
 	})
-	// Toggle waitlist mode (organizer only action).
-	// Label reflects the *current* mode, with distinct colors.
-	modeLabel := "⏳ Auto"
-	modeStyle := discordgo.SuccessButton // vert = auto
+	modeLabel := h.translate("ui.btn_waitlist_auto", nil)
+	modeStyle := discordgo.SuccessButton
 	if !event.WaitlistAuto {
-		modeLabel = "⏳ Manuel"
-		modeStyle = discordgo.PrimaryButton // bleu = manuel
+		modeLabel = h.translate("ui.btn_waitlist_manual", nil)
+		modeStyle = discordgo.PrimaryButton
 	}
 	buttons = append(buttons, discordgo.Button{
 		Label:    modeLabel,
@@ -151,10 +151,10 @@ func (h *Handler) buildComponents(event *entities.Event, waitlistCount, confirme
 		CustomID: fmt.Sprintf("btn_toggle_waitlist_%s", event.MessageID),
 	})
 	if waitlistCount > 0 {
-		buttons = append(buttons, discordgo.Button{Label: "⚙️ Gérer la liste d'attente", Style: discordgo.SecondaryButton, CustomID: fmt.Sprintf("btn_manage_waitlist_%s", event.MessageID)})
+		buttons = append(buttons, discordgo.Button{Label: h.translate("ui.btn_manage_waitlist", nil), Style: discordgo.SecondaryButton, CustomID: fmt.Sprintf("btn_manage_waitlist_%s", event.MessageID)})
 	}
 	if confirmedCount > 0 {
-		buttons = append(buttons, discordgo.Button{Label: "🗑️ Retirer un participant", Style: discordgo.DangerButton, CustomID: fmt.Sprintf("btn_remove_participant_%s", event.MessageID)})
+		buttons = append(buttons, discordgo.Button{Label: h.translate("ui.btn_remove_participant", nil), Style: discordgo.DangerButton, CustomID: fmt.Sprintf("btn_remove_participant_%s", event.MessageID)})
 	}
 	var components []discordgo.MessageComponent
 	for i := 0; i < len(buttons); i += buttonsPerRow {

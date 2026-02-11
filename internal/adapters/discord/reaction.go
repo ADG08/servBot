@@ -3,7 +3,6 @@ package discord
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"time"
 
@@ -48,7 +47,7 @@ func (h *Handler) HandleReactionJoin(s *discordgo.Session, channelID, messageID,
 	}
 	now := time.Now()
 	forceWaitlist := h.shouldForceWaitlistForJoin(ctx, event, now)
-	reply, err := h.participantUseCase.JoinEvent(ctx, event.ID, userID, username, forceWaitlist)
+	reply, err := h.participantUseCase.JoinEvent(ctx, h.defaultLocale, event.ID, userID, username, forceWaitlist)
 	if err != nil {
 		if errors.Is(err, domain.ErrParticipantExists) {
 			sendDM(s, userID, reply)
@@ -95,7 +94,8 @@ func (h *Handler) promoteNextFromWaitlist(s *discordgo.Session, ctx context.Cont
 	if err != nil {
 		return
 	}
-	sendDM(s, luckyWinner.UserID, fmt.Sprintf("🎉 **Bonne nouvelle !** Une place s'est libérée pour **%s**, tu es maintenant parmi les confirmés !", event.Title))
+	msg := h.translate("dm.waitlist.promoted_auto", map[string]any{"EventTitle": event.Title})
+	sendDM(s, luckyWinner.UserID, msg)
 	if shouldGrantPrivateChannelOnPromote(event, time.Now()) {
 		grantPrivateChannelAccess(s, event.PrivateChannelID, luckyWinner.UserID)
 	}
@@ -123,7 +123,7 @@ func (h *Handler) HandleReactionLeave(s *discordgo.Session, channelID, messageID
 		return
 	}
 	revokePrivateChannelAccess(s, event.PrivateChannelID, userID)
-	msg := "🗑️ Tu t'es désisté."
+	msg := h.translate("dm.leave.confirmed", nil)
 	if wasConfirmed {
 		h.onSlotFreed(s, ctx, event)
 	}

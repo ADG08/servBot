@@ -15,16 +15,16 @@ func (h *Handler) HandleAskQuestion(s *discordgo.Session, i *discordgo.Interacti
 	ctx := context.Background()
 	event, err := h.eventUseCase.GetEventByMessageID(ctx, i.Message.ID)
 	if err != nil || event == nil {
-		respondEphemeral(s, i.Interaction, "❌ Impossible de retrouver la sortie pour cette question.")
+		respondEphemeral(s, i.Interaction, h.translate("errors.question_event_not_found", nil))
 		return
 	}
 	if event.QuestionsThreadID == "" {
-		respondEphemeral(s, i.Interaction, "❌ Le thread privé des questions n'est pas disponible pour cette sortie.")
+		respondEphemeral(s, i.Interaction, h.translate("errors.question_thread_unavailable", nil))
 		return
 	}
 	userID := interactionUserID(i)
 	if userID == event.CreatorID {
-		respondEphemeral(s, i.Interaction, "En tant qu'organisateur, tu reçois les questions dans le thread **Questions** du salon privé ; inutile de t'en poser une.")
+		respondEphemeral(s, i.Interaction, h.translate("info.ask_question_organizer", nil))
 		return
 	}
 
@@ -33,16 +33,16 @@ func (h *Handler) HandleAskQuestion(s *discordgo.Session, i *discordgo.Interacti
 		Type: discordgo.InteractionResponseModal,
 		Data: &discordgo.InteractionResponseData{
 			CustomID: customID,
-			Title:    "Poser une question",
+			Title:    h.translate("ui.modal_ask_question_title", nil),
 			Components: []discordgo.MessageComponent{
 				discordgo.ActionsRow{
 					Components: []discordgo.MessageComponent{
 						discordgo.TextInput{
 							CustomID:    "question",
-							Label:       "Ta question",
+							Label:       h.translate("ui.modal_ask_question_label", nil),
 							Style:       discordgo.TextInputParagraph,
 							Required:    true,
-							Placeholder: "Ex: Où se retrouve-t-on exactement ?",
+							Placeholder: h.translate("ui.modal_ask_question_placeholder", nil),
 						},
 					},
 				},
@@ -80,12 +80,12 @@ func (h *Handler) HandleAnswerQuestion(s *discordgo.Session, i *discordgo.Intera
 	ctx := context.Background()
 	event, err := h.eventUseCase.GetEventByID(ctx, uint(eventID))
 	if err != nil || event == nil {
-		respondEphemeral(s, i.Interaction, "❌ Impossible de retrouver la sortie pour cette réponse.")
+		respondEphemeral(s, i.Interaction, h.translate("errors.answer_event_not_found", nil))
 		return
 	}
 	userID := interactionUserID(i)
 	if userID == "" || userID != event.CreatorID {
-		respondEphemeral(s, i.Interaction, "❌ Seul l'organisateur peut répondre à cette question.")
+		respondEphemeral(s, i.Interaction, h.translate("errors.question_only_organizer_can_answer", nil))
 		return
 	}
 
@@ -97,16 +97,16 @@ func (h *Handler) HandleAnswerQuestion(s *discordgo.Session, i *discordgo.Intera
 		Type: discordgo.InteractionResponseModal,
 		Data: &discordgo.InteractionResponseData{
 			CustomID: modalID,
-			Title:    "Ta réponse",
+			Title:    h.translate("ui.modal_answer_title", nil),
 			Components: []discordgo.MessageComponent{
 				discordgo.ActionsRow{
 					Components: []discordgo.MessageComponent{
 						discordgo.TextInput{
 							CustomID:    "answer",
-							Label:       "Ta réponse",
+							Label:       h.translate("ui.modal_answer_label", nil),
 							Style:       discordgo.TextInputParagraph,
 							Required:    true,
-							Placeholder: "Ta réponse sera envoyée en MP au membre.",
+							Placeholder: h.translate("ui.modal_answer_placeholder", nil),
 						},
 					},
 				},
@@ -138,31 +138,31 @@ func (h *Handler) handleAskQuestionModalSubmit(s *discordgo.Session, i *discordg
 	eventIDStr := strings.TrimPrefix(customID, prefix)
 	eventID, err := strconv.ParseUint(eventIDStr, 10, 32)
 	if err != nil {
-		respondEphemeral(s, i.Interaction, "❌ Identifiant de sortie invalide pour la question.")
+		respondEphemeral(s, i.Interaction, h.translate("errors.question_invalid_event_id", nil))
 		return
 	}
 
 	question := extractTextInputValue(data, "question")
 	question = strings.TrimSpace(question)
 	if question == "" {
-		respondEphemeral(s, i.Interaction, "❌ Merci de saisir une question.")
+		respondEphemeral(s, i.Interaction, h.translate("errors.question_required", nil))
 		return
 	}
 
 	ctx := context.Background()
 	event, err := h.eventUseCase.GetEventByID(ctx, uint(eventID))
 	if err != nil || event == nil {
-		respondEphemeral(s, i.Interaction, "❌ Impossible de retrouver la sortie pour cette question.")
+		respondEphemeral(s, i.Interaction, h.translate("errors.question_event_not_found", nil))
 		return
 	}
 	if event.QuestionsThreadID == "" {
-		respondEphemeral(s, i.Interaction, "❌ Le thread privé des questions n'est pas disponible pour cette sortie.")
+		respondEphemeral(s, i.Interaction, h.translate("errors.question_thread_unavailable", nil))
 		return
 	}
 
 	memberID := interactionUserID(i)
 	if memberID == "" {
-		respondEphemeral(s, i.Interaction, "❌ Impossible d'identifier le membre qui pose la question.")
+		respondEphemeral(s, i.Interaction, h.translate("errors.question_member_unknown", nil))
 		return
 	}
 
@@ -175,20 +175,20 @@ func (h *Handler) handleAskQuestionModalSubmit(s *discordgo.Session, i *discordg
 	}
 
 	var contentBuilder strings.Builder
-	contentBuilder.WriteString(fmt.Sprintf("<@%s> te demande :\n", memberID))
-	contentBuilder.WriteString(fmt.Sprintf("> %s\n", question))
+	contentBuilder.WriteString("<@" + memberID + ">" + h.translate("ui.question_thread_ask_suffix", nil))
+	contentBuilder.WriteString("> " + question + "\n")
 	contentStr := contentBuilder.String()
 
 	msg, err := s.ChannelMessageSend(event.QuestionsThreadID, contentStr)
 	if err != nil || msg == nil {
-		respondEphemeral(s, i.Interaction, "❌ Impossible d'envoyer la question à l'organisateur.")
+		respondEphemeral(s, i.Interaction, h.translate("errors.question_send_failed", nil))
 		return
 	}
 	components := []discordgo.MessageComponent{
 		discordgo.ActionsRow{
 			Components: []discordgo.MessageComponent{
 				discordgo.Button{
-					Label:    "Répondre",
+					Label:    h.translate("ui.btn_reply", nil),
 					Style:    discordgo.PrimaryButton,
 					CustomID: fmt.Sprintf("btn_answer_question_%d_%s_%s", event.ID, memberID, msg.ID),
 				},
@@ -205,21 +205,22 @@ func (h *Handler) handleAskQuestionModalSubmit(s *discordgo.Session, i *discordg
 		log.Printf("❌ Ajout bouton Répondre (question thread): %v", err)
 	}
 
-	respondEphemeral(s, i.Interaction, "✅ Ta question a été envoyée à l'organisateur.")
+	respondEphemeral(s, i.Interaction, h.translate("success.question_sent", nil))
 }
 
-// extractQuestionFromThreadMessage extrait le texte de la question depuis le message posté dans le thread (format: "<@id> te demande :\n> question").
+// extractQuestionFromThreadMessage extracts the question text from the thread message.
+// Supports both FR (" te demande :\n") and EN (" asks:\n") suffixes.
 func extractQuestionFromThreadMessage(content string) string {
-	const prefix = "te demande :\n"
-	idx := strings.Index(content, prefix)
-	if idx == -1 {
-		return ""
+	for _, suffix := range []string{" te demande :\n", " asks:\n"} {
+		idx := strings.Index(content, suffix)
+		if idx != -1 {
+			block := strings.TrimSpace(content[idx+len(suffix):])
+			block = strings.TrimPrefix(block, "> ")
+			block = strings.ReplaceAll(block, "\n> ", "\n")
+			return strings.TrimSpace(block)
+		}
 	}
-	block := strings.TrimSpace(content[idx+len(prefix):])
-	// Enlever le préfixe "> " de chaque ligne (citation Discord)
-	block = strings.TrimPrefix(block, "> ")
-	block = strings.ReplaceAll(block, "\n> ", "\n")
-	return strings.TrimSpace(block)
+	return ""
 }
 
 // handleAnswerQuestionModalSubmit envoie la réponse en MP au membre, précédée de sa question.
@@ -232,7 +233,7 @@ func (h *Handler) handleAnswerQuestionModalSubmit(s *discordgo.Session, i *disco
 	payload := strings.TrimPrefix(customID, prefix)
 	parts := strings.Split(payload, "_")
 	if len(parts) < 2 {
-		respondEphemeral(s, i.Interaction, "❌ Données de réponse invalides.")
+		respondEphemeral(s, i.Interaction, h.translate("errors.answer_invalid_payload", nil))
 		return
 	}
 	eventIDStr, memberID := parts[0], parts[1]
@@ -242,26 +243,26 @@ func (h *Handler) handleAnswerQuestionModalSubmit(s *discordgo.Session, i *disco
 	}
 	eventID, err := strconv.ParseUint(eventIDStr, 10, 32)
 	if err != nil {
-		respondEphemeral(s, i.Interaction, "❌ Identifiant de sortie invalide pour la réponse.")
+		respondEphemeral(s, i.Interaction, h.translate("errors.answer_invalid_event_id", nil))
 		return
 	}
 
 	answer := extractTextInputValue(data, "answer")
 	answer = strings.TrimSpace(answer)
 	if answer == "" {
-		respondEphemeral(s, i.Interaction, "❌ Merci de saisir une réponse.")
+		respondEphemeral(s, i.Interaction, h.translate("errors.answer_required", nil))
 		return
 	}
 
 	ctx := context.Background()
 	event, err := h.eventUseCase.GetEventByID(ctx, uint(eventID))
 	if err != nil || event == nil {
-		respondEphemeral(s, i.Interaction, "❌ Impossible de retrouver la sortie pour cette réponse.")
+		respondEphemeral(s, i.Interaction, h.translate("errors.answer_event_not_found", nil))
 		return
 	}
 	userID := interactionUserID(i)
 	if userID == "" || userID != event.CreatorID {
-		respondEphemeral(s, i.Interaction, "❌ Seul l'organisateur peut répondre à cette question.")
+		respondEphemeral(s, i.Interaction, h.translate("errors.question_only_organizer_can_answer", nil))
 		return
 	}
 
@@ -274,16 +275,17 @@ func (h *Handler) handleAnswerQuestionModalSubmit(s *discordgo.Session, i *disco
 
 	var dmBuilder strings.Builder
 	if link := h.messageLink(event.ChannelID, event.MessageID); link != "" {
-		dmBuilder.WriteString(fmt.Sprintf("✉️ **[%s](%s)** – Réponse de l'organisateur\n\n", event.Title, link))
+		dmBuilder.WriteString(h.translate("ui.dm_answer_header_link", map[string]any{"EventTitle": event.Title, "Link": link}))
 	} else {
-		dmBuilder.WriteString(fmt.Sprintf("✉️ **%s** – Réponse de l'organisateur\n\n", event.Title))
+		dmBuilder.WriteString(h.translate("ui.dm_answer_header", map[string]any{"EventTitle": event.Title}))
 	}
 	if questionText != "" {
-		dmBuilder.WriteString(fmt.Sprintf("**Ta question :**\n%s\n\n", questionText))
+		dmBuilder.WriteString(h.translate("ui.dm_answer_your_question", nil))
+		dmBuilder.WriteString(questionText + "\n\n")
 	}
-	dmBuilder.WriteString("**Réponse :**\n")
+	dmBuilder.WriteString(h.translate("ui.dm_answer_label", nil))
 	dmBuilder.WriteString(answer)
 
 	sendDM(s, memberID, dmBuilder.String())
-	respondEphemeral(s, i.Interaction, "✅ Réponse envoyée en MP au membre.")
+	respondEphemeral(s, i.Interaction, h.translate("success.answer_sent", nil))
 }

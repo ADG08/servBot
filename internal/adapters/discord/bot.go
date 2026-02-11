@@ -12,6 +12,7 @@ import (
 
 	"servbot/internal/application"
 	"servbot/internal/config"
+	appi18n "servbot/internal/infrastructure/i18n"
 	"servbot/internal/ports/output"
 )
 
@@ -23,15 +24,18 @@ type Bot struct {
 
 // NewBot wires output adapters, application services, and handler (composition root).
 func NewBot(cfg *config.Config, eventRepo output.EventRepository, participantRepo output.ParticipantRepository) *Bot {
+	defaultLocale := "fr"
+	translator := appi18n.NewTranslator(defaultLocale)
+
 	eventUC := application.NewEventService(eventRepo, participantRepo)
-	participantUC := application.NewParticipantService(participantRepo, eventRepo)
+	participantUC := application.NewParticipantService(participantRepo, eventRepo, translator)
 
 	s, err := discordgo.New("Bot " + cfg.Token)
 	if err != nil {
 		log.Fatal("❌ Erreur lors de la création de la session Discord:", err)
 	}
 
-	handler := NewHandler(eventUC, participantUC, cfg.ForumChannelID, cfg.GuildID)
+	handler := NewHandler(eventUC, participantUC, translator, cfg.ForumChannelID, cfg.GuildID, defaultLocale)
 
 	bot := &Bot{
 		session: s,
@@ -158,14 +162,17 @@ func (b *Bot) Start() error {
 	}
 
 	commands := []*discordgo.ApplicationCommand{
-		{Name: "sortie", Description: "Créer une nouvelle sortie"},
+		{
+			Name:        "sortie",
+			Description: b.handler.translate("cmd.sortie.description", nil),
+		},
 		{
 			Name:        "sortie-template",
-			Description: "Ouvrir le formulaire de sortie pré-rempli pour le debug",
+			Description: b.handler.translate("cmd.sortie_template.description", nil),
 		},
 		{
 			Name:        "retirer",
-			Description: "Retirer un membre d'une sortie (à utiliser dans le salon privé)",
+			Description: b.handler.translate("cmd.retirer.description", nil),
 		},
 	}
 
