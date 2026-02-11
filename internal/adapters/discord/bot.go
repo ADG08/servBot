@@ -93,6 +93,10 @@ func (b *Bot) handleInteraction(s *discordgo.Session, i *discordgo.InteractionCr
 				b.handler.HandleEditEvent(s, i)
 			case strings.HasPrefix(customID, "btn_toggle_waitlist_"):
 				b.handler.HandleToggleWaitlistMode(s, i)
+			case strings.HasPrefix(customID, "btn_waitlist_slot_accept_"):
+				b.handler.HandleWaitlistSlotAccept(s, i)
+			case strings.HasPrefix(customID, "btn_waitlist_slot_ignore_"):
+				b.handler.HandleWaitlistSlotIgnore(s, i)
 			}
 		} else {
 			switch {
