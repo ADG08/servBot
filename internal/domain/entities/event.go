@@ -26,6 +26,7 @@ type Event struct {
 	ScheduledAt                 time.Time // zero = not set (for backward compat)
 	PrivateChannelID            string    // salon privé organisateur seul (+ bot)
 	QuestionsThreadID           string    // thread "Questions" dans ce salon
+	WaitlistAuto                bool
 	OrganizerValidationDMSentAt time.Time
 	OrganizerStep1FinalizedAt   time.Time
 	Participants                []Participant

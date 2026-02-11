@@ -25,7 +25,7 @@ func NewParticipantService(
 	}
 }
 
-func (s *ParticipantService) JoinEvent(ctx context.Context, eventID uint, userID, username string) (string, error) {
+func (s *ParticipantService) JoinEvent(ctx context.Context, eventID uint, userID, username string, forceWaitlist bool) (string, error) {
 	event, err := s.eventRepo.FindByID(ctx, eventID)
 	if err != nil {
 		return "", domain.ErrEventNotFound
@@ -47,6 +47,9 @@ func (s *ParticipantService) JoinEvent(ctx context.Context, eventID uint, userID
 	if event.MaxSlots > 0 && int(confirmedCount) >= event.MaxSlots {
 		status = domain.StatusWaitlist
 		reply = "⚠️ Complet ! Tu es en **liste d'attente**."
+	} else if forceWaitlist {
+		status = domain.StatusWaitlist
+		reply = "⚠️ Tu es en **liste d'attente**. L'organisateur validera les inscriptions."
 	}
 	participant := &entities.Participant{
 		EventID:  eventID,

@@ -37,6 +37,7 @@ func (r *EventRepository) Create(ctx context.Context, event *entities.Event) err
 		ScheduledAt:       scheduledAt,
 		PrivateChannelID:  event.PrivateChannelID,
 		QuestionsThreadID: event.QuestionsThreadID,
+		WaitlistAuto:      event.WaitlistAuto,
 	})
 	if err != nil {
 		return fmt.Errorf("create event: %w", err)
@@ -151,11 +152,12 @@ func (r *EventRepository) Update(ctx context.Context, event *entities.Event) err
 		scheduledAt = pgtype.Timestamptz{Time: event.ScheduledAt, Valid: true}
 	}
 	err := r.q.UpdateEvent(ctx, sqlc_generated.UpdateEventParams{
-		ID:          int64(event.ID),
-		Title:       event.Title,
-		Description: event.Description,
-		MaxSlots:    int32(event.MaxSlots),
-		ScheduledAt: scheduledAt,
+		ID:           int64(event.ID),
+		Title:        event.Title,
+		Description:  event.Description,
+		MaxSlots:     int32(event.MaxSlots),
+		ScheduledAt:  scheduledAt,
+		WaitlistAuto: event.WaitlistAuto,
 	})
 	if err != nil {
 		return fmt.Errorf("update event: %w", err)

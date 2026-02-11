@@ -19,6 +19,7 @@ type Event struct {
 	ScheduledAt                 pgtype.Timestamptz
 	PrivateChannelID            string
 	QuestionsThreadID           string
+	WaitlistAuto                bool
 	OrganizerValidationDmSentAt pgtype.Timestamptz
 	OrganizerStep1FinalizedAt   pgtype.Timestamptz
 	CreatedAt                   pgtype.Timestamptz

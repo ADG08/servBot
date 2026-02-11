@@ -134,6 +134,7 @@ func (h *Handler) handleCreateEventModalSubmit(s *discordgo.Session, i *discordg
 		ScheduledAt:       scheduledAt,
 		PrivateChannelID:  privCh.ID,
 		QuestionsThreadID: questionsThreadID,
+		WaitlistAuto:      true,
 	}
 
 	ctx := context.Background()

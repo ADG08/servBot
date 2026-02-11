@@ -144,6 +144,40 @@ func (h *Handler) sendOrganizerAcceptRefuseDM(s *discordgo.Session, eventTitle, 
 	return err
 }
 
+func (h *Handler) sendWaitlistSlotFreedDM(s *discordgo.Session, event *entities.Event, next *entities.Participant) error {
+	ch, err := s.UserChannelCreate(event.CreatorID)
+	if err != nil || ch == nil {
+		return fmt.Errorf("create organizer DM channel: %w", err)
+	}
+	var content string
+	if link := h.messageLink(event.ChannelID, event.MessageID); link != "" {
+		content = fmt.Sprintf("**Une place s'est libérée pour :** [%s](%s)\n\nFaire monter <@%s> (%s) de la liste d'attente ?", event.Title, link, next.UserID, next.Username)
+	} else {
+		content = fmt.Sprintf("**Une place s'est libérée pour : %s**\n\nFaire monter <@%s> (%s) de la liste d'attente ?", event.Title, next.UserID, next.Username)
+	}
+	components := []discordgo.MessageComponent{
+		discordgo.ActionsRow{
+			Components: []discordgo.MessageComponent{
+				discordgo.Button{
+					Label:    "Accepter",
+					Style:    discordgo.SuccessButton,
+					CustomID: fmt.Sprintf("btn_waitlist_slot_accept_%d", next.ID),
+				},
+				discordgo.Button{
+					Label:    "Ignorer",
+					Style:    discordgo.SecondaryButton,
+					CustomID: fmt.Sprintf("btn_waitlist_slot_ignore_%d", next.ID),
+				},
+			},
+		},
+	}
+	_, err = s.ChannelMessageSendComplex(ch.ID, &discordgo.MessageSend{
+		Content:    content,
+		Components: components,
+	})
+	return err
+}
+
 func eventToEventWithParticipants(e *entities.Event) *eventWithParticipants {
 	if e == nil {
 		return nil
@@ -368,6 +402,57 @@ func (h *Handler) HandleOrganizerRefuse(s *discordgo.Session, i *discordgo.Inter
 			Flags:   discordgo.MessageFlagsEphemeral,
 		},
 	})
+}
+
+func (h *Handler) HandleWaitlistSlotAccept(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	ctx := context.Background()
+	customID := i.MessageComponentData().CustomID
+	prefix := "btn_waitlist_slot_accept_"
+	if !strings.HasPrefix(customID, prefix) {
+		return
+	}
+	participantIDStr := strings.TrimPrefix(customID, prefix)
+	participantID, err := strconv.ParseUint(participantIDStr, 10, 32)
+	if err != nil {
+		return
+	}
+	participant, err := h.participantUseCase.GetParticipantByID(ctx, uint(participantID))
+	if err != nil {
+		return
+	}
+	event, err := h.eventUseCase.GetEventByID(ctx, participant.EventID)
+	if err != nil {
+		return
+	}
+	userID := interactionUserID(i)
+	if event.CreatorID != userID {
+		respondEphemeral(s, i.Interaction, "❌ Seul l'organisateur peut accepter.")
+		return
+	}
+	if participant.Status != domain.StatusWaitlist {
+		respondEphemeral(s, i.Interaction, "❌ Ce participant n'est plus en liste d'attente.")
+		return
+	}
+	promoted, _, err := h.participantUseCase.PromoteParticipant(ctx, participant.ID, userID)
+	if err != nil {
+		respondEphemeral(s, i.Interaction, "❌ Erreur lors de la promotion.")
+		return
+	}
+	sendDM(s, promoted.UserID, fmt.Sprintf("🎉 **Bonne nouvelle !** Une place s'est libérée pour **%s**, tu es maintenant parmi les confirmés !", event.Title))
+	if shouldGrantPrivateChannelOnPromote(event, time.Now()) {
+		grantPrivateChannelAccess(s, event.PrivateChannelID, promoted.UserID)
+	}
+	h.updateEmbed(ctx, s, event.ChannelID, event.MessageID)
+	respondEphemeral(s, i.Interaction, fmt.Sprintf("✅ %s a été fait monter de la liste d'attente.", promoted.Username))
+}
+
+func (h *Handler) HandleWaitlistSlotIgnore(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	customID := i.MessageComponentData().CustomID
+	prefix := "btn_waitlist_slot_ignore_"
+	if !strings.HasPrefix(customID, prefix) {
+		return
+	}
+	respondEphemeral(s, i.Interaction, "Aucune promotion effectuée.")
 }
 
 func (h *Handler) processH48OrganizerDMs(s *discordgo.Session, ctx context.Context, now time.Time) {

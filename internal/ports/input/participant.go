@@ -7,7 +7,7 @@ import (
 )
 
 type ParticipantUseCase interface {
-	JoinEvent(ctx context.Context, eventID uint, userID, username string) (string, error)
+	JoinEvent(ctx context.Context, eventID uint, userID, username string, forceWaitlist bool) (string, error)
 	LeaveEvent(ctx context.Context, eventID uint, userID string) (bool, error)
 	GetParticipantByEventIDAndUserID(ctx context.Context, eventID uint, userID string) (*entities.Participant, error)
 	GetParticipantByID(ctx context.Context, id uint) (*entities.Participant, error)

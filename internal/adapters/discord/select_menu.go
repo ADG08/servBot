@@ -302,7 +302,7 @@ func (h *Handler) HandleRemoveUserSelect(s *discordgo.Session, i *discordgo.Inte
 		revokePrivateChannelAccess(s, event.PrivateChannelID, participant.UserID)
 
 		if wasConfirmed {
-			h.promoteNextFromWaitlist(s, ctx, event)
+			h.onSlotFreed(s, ctx, event)
 		}
 
 		sendDM(s, participant.UserID, "🚪 Tu as été retiré de la sortie **"+event.Title+"** par l'organisateur.")

@@ -29,6 +29,7 @@ func eventToDomain(e sqlc_generated.Event) entities.Event {
 		ScheduledAt:                 pgtypeTimestamptzToTime(e.ScheduledAt),
 		PrivateChannelID:            e.PrivateChannelID,
 		QuestionsThreadID:           e.QuestionsThreadID,
+		WaitlistAuto:                e.WaitlistAuto,
 		OrganizerValidationDMSentAt: pgtypeTimestamptzToTime(e.OrganizerValidationDmSentAt),
 		OrganizerStep1FinalizedAt:   pgtypeTimestamptzToTime(e.OrganizerStep1FinalizedAt),
 		CreatedAt:                   pgtypeTimestamptzToTime(e.CreatedAt),
