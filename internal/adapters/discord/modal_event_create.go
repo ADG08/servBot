@@ -38,7 +38,12 @@ func (h *Handler) handleCreateEventModalSubmit(s *discordgo.Session, i *discordg
 	}
 	scheduledAt, err := pkgdiscord.ParseEventDateTime(dateStr, timeStr)
 	if err != nil {
-		respondEphemeral(s, i.Interaction, "❌ "+err.Error())
+		// When ParseEventDateTime returns a domain error, resolve it via i18n.
+		if msg := pkgdiscord.DomainErrorMessage(err); msg != "" {
+			respondEphemeral(s, i.Interaction, "❌ "+msg)
+		} else {
+			respondEphemeral(s, i.Interaction, "❌ "+err.Error())
+		}
 		return
 	}
 	slots, err := parseSlots(slotsStr)

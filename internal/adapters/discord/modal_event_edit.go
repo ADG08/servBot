@@ -78,7 +78,13 @@ func (h *Handler) HandleEditModalSubmit(s *discordgo.Session, i *discordgo.Inter
 		var parseErr error
 		scheduledAt, parseErr = pkgdiscord.ParseEventDateTime(dateStr, timeStr)
 		if parseErr != nil {
-			respondEphemeral(s, i.Interaction, "❌ "+parseErr.Error())
+			// When the parsing error comes from the domain (e.g. date in the past),
+			// resolve it via the i18n adapter; otherwise, fall back to the raw error.
+			if msg := pkgdiscord.DomainErrorMessage(parseErr); msg != "" {
+				respondEphemeral(s, i.Interaction, "❌ "+msg)
+			} else {
+				respondEphemeral(s, i.Interaction, "❌ "+parseErr.Error())
+			}
 			return
 		}
 	}
