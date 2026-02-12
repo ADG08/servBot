@@ -48,27 +48,27 @@ func (h *Handler) buildOrganizerTriDMContent(event *eventWithParticipants) strin
 	confirmed, waitlist := pkgdiscord.FormatParticipants(participantsSansOrga)
 	var b strings.Builder
 	if link := h.messageLink(event.ChannelID, event.MessageID); link != "" {
-		b.WriteString(fmt.Sprintf("**Tri pour la sortie :** [%s](%s)\n\n", event.Title, link))
+		b.WriteString(h.translate("ui.dm_organizer_tri_title_link", map[string]any{"EventTitle": event.Title, "Link": link}))
 	} else {
-		b.WriteString(fmt.Sprintf("**Tri pour la sortie : %s**\n\n", event.Title))
+		b.WriteString(h.translate("ui.dm_organizer_tri_title", map[string]any{"EventTitle": event.Title}))
 	}
 	if !event.ScheduledAt.IsZero() {
-		b.WriteString(fmt.Sprintf("📅 %s\n\n", event.ScheduledAt.In(tz.Paris).Format("02/01/2006 à 15:04")))
+		b.WriteString(h.translate("ui.dm_organizer_tri_date", map[string]any{"Date": event.ScheduledAt.In(tz.Paris).Format("02/01/2006 15:04")}))
 	}
 	if len(confirmed) > 0 {
-		b.WriteString("✅ **Potentiels intéressés confirmés :**\n")
+		b.WriteString(h.translate("ui.dm_organizer_tri_confirmed_header", nil))
 		for _, line := range confirmed {
 			b.WriteString(line + "\n")
 		}
 		b.WriteString("\n")
 	}
 	if len(waitlist) > 0 {
-		b.WriteString("⏳ **Potentiels intéressés en attente :**\n")
+		b.WriteString(h.translate("ui.dm_organizer_tri_waitlist_header", nil))
 		for _, line := range waitlist {
 			b.WriteString(line + "\n")
 		}
 	}
-	b.WriteString("\nClique sur **Finaliser l'étape 1** quand tu as validé la liste.")
+	b.WriteString(h.translate("ui.dm_organizer_tri_footer", nil))
 	return b.String()
 }
 
@@ -96,7 +96,7 @@ func (h *Handler) sendOrganizerValidationDM(s *discordgo.Session, event *eventWi
 		discordgo.ActionsRow{
 			Components: []discordgo.MessageComponent{
 				discordgo.Button{
-					Label:    "Finaliser l'étape 1",
+					Label:    h.translate("ui.btn_finalize_step1", nil),
 					Style:    discordgo.SuccessButton,
 					CustomID: fmt.Sprintf("btn_organizer_finalize_%d", event.ID),
 				},
@@ -116,21 +116,23 @@ func (h *Handler) sendOrganizerAcceptRefuseDM(s *discordgo.Session, eventTitle, 
 		return fmt.Errorf("create organizer DM channel: %w", err)
 	}
 	var content string
+	data := map[string]any{"EventTitle": eventTitle, "UserID": participant.UserID, "Username": participant.Username}
 	if link := h.messageLink(channelID, messageID); link != "" {
-		content = fmt.Sprintf("**Nouvelle inscription pour :** [%s](%s)\n\n<@%s> (%s) s'est déclaré potentiellement intéressé.\n\nAccepter ou refuser ce potentiel intéressé ?", eventTitle, link, participant.UserID, participant.Username)
+		data["Link"] = link
+		content = h.translate("ui.dm_organizer_new_registration_link", data)
 	} else {
-		content = fmt.Sprintf("**Nouvelle inscription pour : %s**\n\n<@%s> (%s) s'est déclaré potentiellement intéressé.\n\nAccepter ou refuser ce potentiel intéressé ?", eventTitle, participant.UserID, participant.Username)
+		content = h.translate("ui.dm_organizer_new_registration", data)
 	}
 	components := []discordgo.MessageComponent{
 		discordgo.ActionsRow{
 			Components: []discordgo.MessageComponent{
 				discordgo.Button{
-					Label:    "Accepter",
+					Label:    h.translate("ui.btn_accept", nil),
 					Style:    discordgo.SuccessButton,
 					CustomID: fmt.Sprintf("btn_organizer_accept_%d", participant.ID),
 				},
 				discordgo.Button{
-					Label:    "Refuser",
+					Label:    h.translate("ui.btn_refuse", nil),
 					Style:    discordgo.DangerButton,
 					CustomID: fmt.Sprintf("btn_organizer_refuse_%d", participant.ID),
 				},
@@ -149,22 +151,24 @@ func (h *Handler) sendWaitlistSlotFreedDM(s *discordgo.Session, event *entities.
 	if err != nil || ch == nil {
 		return fmt.Errorf("create organizer DM channel: %w", err)
 	}
+	data := map[string]any{"EventTitle": event.Title, "UserID": next.UserID, "Username": next.Username}
 	var content string
 	if link := h.messageLink(event.ChannelID, event.MessageID); link != "" {
-		content = fmt.Sprintf("**Une place s'est libérée pour :** [%s](%s)\n\nFaire monter <@%s> (%s) de la liste d'attente ?", event.Title, link, next.UserID, next.Username)
+		data["Link"] = link
+		content = h.translate("ui.dm_waitlist_slot_freed_link", data)
 	} else {
-		content = fmt.Sprintf("**Une place s'est libérée pour : %s**\n\nFaire monter <@%s> (%s) de la liste d'attente ?", event.Title, next.UserID, next.Username)
+		content = h.translate("ui.dm_waitlist_slot_freed", data)
 	}
 	components := []discordgo.MessageComponent{
 		discordgo.ActionsRow{
 			Components: []discordgo.MessageComponent{
 				discordgo.Button{
-					Label:    "Accepter",
+					Label:    h.translate("ui.btn_accept", nil),
 					Style:    discordgo.SuccessButton,
 					CustomID: fmt.Sprintf("btn_waitlist_slot_accept_%d", next.ID),
 				},
 				discordgo.Button{
-					Label:    "Ignorer",
+					Label:    h.translate("ui.btn_ignore", nil),
 					Style:    discordgo.SecondaryButton,
 					CustomID: fmt.Sprintf("btn_waitlist_slot_ignore_%d", next.ID),
 				},
@@ -229,14 +233,17 @@ func (h *Handler) HandleOrganizerFinalizeStep1(s *discordgo.Session, i *discordg
 
 	event, err := h.eventUseCase.FinalizeOrganizerStep1(ctx, uint(eventID), userID)
 	if err != nil {
-		msg := "❌ Erreur lors de la finalisation."
+		key := "errors.finalize_generic"
 		switch {
 		case errors.Is(err, domain.ErrNotOrganizer):
-			msg = "❌ Seul l'organisateur de cette sortie peut finaliser l'étape 1."
+			key = "errors.finalize_only_organizer"
 		case errors.Is(err, domain.ErrEventAlreadyFinalized):
-			msg = "ℹ️ Cette sortie a déjà été finalisée."
+			key = "errors.finalize_already_done"
 		}
-		s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{Content: msg, Flags: discordgo.MessageFlagsEphemeral})
+		s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+			Content: h.translate(key, nil),
+			Flags:   discordgo.MessageFlagsEphemeral,
+		})
 		return
 	}
 
@@ -246,14 +253,19 @@ func (h *Handler) HandleOrganizerFinalizeStep1(s *discordgo.Session, i *discordg
 		}
 		var dmContent string
 		if link := h.messageLink(event.ChannelID, event.MessageID); link != "" {
-			dmContent = fmt.Sprintf("🎉 **Ta participation à [%s](%s) est confirmée !**", event.Title, link)
+			dmContent = h.translate("dm.finalize_confirmed_with_link", map[string]any{
+				"EventTitle": event.Title,
+				"Link":       link,
+			})
 		} else {
-			dmContent = fmt.Sprintf("🎉 **Ta participation à %s est confirmée !**", event.Title)
+			dmContent = h.translate("dm.finalize_confirmed_no_link", map[string]any{
+				"EventTitle": event.Title,
+			})
 		}
 		if !event.ScheduledAt.IsZero() {
-			dmContent += fmt.Sprintf("\n📅 %s", event.ScheduledAt.In(tz.Paris).Format("02/01/2006 à 15:04"))
+			dmContent += "\n" + h.translate("ui.dm_date_line", map[string]any{"Date": event.ScheduledAt.In(tz.Paris).Format("02/01/2006 15:04")})
 		}
-		dmContent += "\nÀ bientôt !"
+		dmContent += h.translate("dm.finalize_confirmed_footer", nil)
 		sendDM(s, p.UserID, dmContent)
 		grantPrivateChannelAccess(s, event.PrivateChannelID, p.UserID)
 	}
@@ -265,7 +277,7 @@ func (h *Handler) HandleOrganizerFinalizeStep1(s *discordgo.Session, i *discordg
 	h.updateEmbed(ctx, s, event.ChannelID, event.MessageID)
 
 	s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-		Content: "✅ Étape 1 finalisée ! Les participants confirmés ont été notifiés et l'événement a été ajouté au calendrier Discord.",
+		Content: h.translate("success.finalize_step1", nil),
 		Flags:   discordgo.MessageFlagsEphemeral,
 	})
 }
@@ -279,7 +291,7 @@ func (h *Handler) createDiscordScheduledEvent(s *discordgo.Session, event *entit
 		location = location[:97] + "..."
 	}
 	if location == "" {
-		location = "Voir les détails de la sortie"
+		location = h.translate("ui.calendar_location_placeholder", nil)
 	}
 
 	_, err := s.GuildScheduledEventCreate(h.guildID, &discordgo.GuildScheduledEventParams{
@@ -322,10 +334,10 @@ func (h *Handler) HandleOrganizerAccept(s *discordgo.Session, i *discordgo.Inter
 	if event.CreatorID != userID {
 		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "❌ Seul l'organisateur peut accepter ce potentiel intéressé.",
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
+				Data: &discordgo.InteractionResponseData{
+					Content: h.translate("errors.only_organizer_can_accept_candidate", nil),
+					Flags:   discordgo.MessageFlagsEphemeral,
+				},
 		})
 		return
 	}
@@ -336,7 +348,7 @@ func (h *Handler) HandleOrganizerAccept(s *discordgo.Session, i *discordgo.Inter
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
-					Content: "❌ Erreur lors de l'acceptation du participant.",
+					Content: h.translate("errors.generic", nil),
 					Flags:   discordgo.MessageFlagsEphemeral,
 				},
 			})
@@ -345,7 +357,9 @@ func (h *Handler) HandleOrganizerAccept(s *discordgo.Session, i *discordgo.Inter
 		participant = promoted
 	}
 
-	sendDM(s, participant.UserID, fmt.Sprintf("✅ **L'organisateur de %s t'a accepté !** Ta participation est confirmée.", event.Title))
+	sendDM(s, participant.UserID, h.translate("dm.organizer_accepted", map[string]any{
+		"EventTitle": event.Title,
+	}))
 	grantPrivateChannelAccess(s, event.PrivateChannelID, participant.UserID)
 
 	h.updateEmbed(ctx, s, event.ChannelID, event.MessageID)
@@ -353,7 +367,7 @@ func (h *Handler) HandleOrganizerAccept(s *discordgo.Session, i *discordgo.Inter
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
-			Content: fmt.Sprintf("✅ %s a été accepté.", participant.Username),
+			Content: h.translate("success.organizer_accepted", map[string]any{"Username": participant.Username}),
 			Flags:   discordgo.MessageFlagsEphemeral,
 		},
 	})
@@ -378,7 +392,7 @@ func (h *Handler) HandleOrganizerRefuse(s *discordgo.Session, i *discordgo.Inter
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
-					Content: "❌ Seul l'organisateur peut refuser ce potentiel intéressé.",
+					Content: h.translate("errors.only_organizer_can_refuse_candidate", nil),
 					Flags:   discordgo.MessageFlagsEphemeral,
 				},
 			})
@@ -391,14 +405,16 @@ func (h *Handler) HandleOrganizerRefuse(s *discordgo.Session, i *discordgo.Inter
 		_ = s.MessageReactionRemove(event.ChannelID, event.MessageID, reactionJoinEmoji, participant.UserID)
 		ch, _ := s.UserChannelCreate(participant.UserID)
 		if ch != nil {
-			s.ChannelMessageSend(ch.ID, fmt.Sprintf("L'organisateur de **%s** a refusé ton inscription.", event.Title))
+			s.ChannelMessageSend(ch.ID, h.translate("dm.organizer_refused", map[string]any{
+				"EventTitle": event.Title,
+			}))
 		}
 		h.updateEmbed(ctx, s, event.ChannelID, event.MessageID)
 	}
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
-			Content: fmt.Sprintf("✅ %s a été refusé et retiré de la sortie.", participant.Username),
+			Content: h.translate("success.organizer_refused", map[string]any{"Username": participant.Username}),
 			Flags:   discordgo.MessageFlagsEphemeral,
 		},
 	})
@@ -426,24 +442,28 @@ func (h *Handler) HandleWaitlistSlotAccept(s *discordgo.Session, i *discordgo.In
 	}
 	userID := interactionUserID(i)
 	if event.CreatorID != userID {
-		respondEphemeral(s, i.Interaction, "❌ Seul l'organisateur peut accepter.")
+		respondEphemeral(s, i.Interaction, h.translate("errors.only_organizer_can_accept", nil))
 		return
 	}
 	if participant.Status != domain.StatusWaitlist {
-		respondEphemeral(s, i.Interaction, "❌ Ce participant n'est plus en liste d'attente.")
+		respondEphemeral(s, i.Interaction, h.translate("errors.participant_not_waitlist", nil))
 		return
 	}
 	promoted, _, err := h.participantUseCase.PromoteParticipant(ctx, participant.ID, userID)
 	if err != nil {
-		respondEphemeral(s, i.Interaction, "❌ Erreur lors de la promotion.")
+		respondEphemeral(s, i.Interaction, h.translate("errors.finalize_generic", nil))
 		return
 	}
-	sendDM(s, promoted.UserID, fmt.Sprintf("🎉 **Bonne nouvelle !** Une place s'est libérée pour **%s**, tu es maintenant parmi les confirmés !", event.Title))
+	sendDM(s, promoted.UserID, h.translate("dm.waitlist.promoted_auto", map[string]any{
+		"EventTitle": event.Title,
+	}))
 	if shouldGrantPrivateChannelOnPromote(event, time.Now()) {
 		grantPrivateChannelAccess(s, event.PrivateChannelID, promoted.UserID)
 	}
 	h.updateEmbed(ctx, s, event.ChannelID, event.MessageID)
-	respondEphemeral(s, i.Interaction, fmt.Sprintf("✅ %s a été fait monter de la liste d'attente.", promoted.Username))
+	respondEphemeral(s, i.Interaction, h.translate("success.participant_promoted", map[string]any{
+		"Username": promoted.Username,
+	}))
 }
 
 func (h *Handler) HandleWaitlistSlotIgnore(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -452,7 +472,7 @@ func (h *Handler) HandleWaitlistSlotIgnore(s *discordgo.Session, i *discordgo.In
 	if !strings.HasPrefix(customID, prefix) {
 		return
 	}
-	respondEphemeral(s, i.Interaction, "Aucune promotion effectuée.")
+	respondEphemeral(s, i.Interaction, h.translate("info.no_promotion_done", nil))
 }
 
 func (h *Handler) processH48OrganizerDMs(s *discordgo.Session, ctx context.Context, now time.Time) {

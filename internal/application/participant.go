@@ -13,43 +13,46 @@ import (
 type ParticipantService struct {
 	participantRepo output.ParticipantRepository
 	eventRepo       output.EventRepository
+	translator      output.T
 }
 
 func NewParticipantService(
 	participantRepo output.ParticipantRepository,
 	eventRepo output.EventRepository,
+	translator output.T,
 ) *ParticipantService {
 	return &ParticipantService{
 		participantRepo: participantRepo,
 		eventRepo:       eventRepo,
+		translator:      translator,
 	}
 }
 
-func (s *ParticipantService) JoinEvent(ctx context.Context, eventID uint, userID, username string, forceWaitlist bool) (string, error) {
+func (s *ParticipantService) JoinEvent(ctx context.Context, locale string, eventID uint, userID, username string, forceWaitlist bool) (string, error) {
 	event, err := s.eventRepo.FindByID(ctx, eventID)
 	if err != nil {
 		return "", domain.ErrEventNotFound
 	}
 	existing, _ := s.participantRepo.FindByEventIDAndUserID(ctx, eventID, userID)
 	if existing != nil {
-		msg := "Tu as déjà manifesté ton intérêt."
+		msgKey := "dm.join.already_interested"
 		if existing.Status == domain.StatusWaitlist {
-			msg = "Tu es en liste d'attente."
+			msgKey = "dm.join.already_waitlist"
 		}
-		return msg, domain.ErrParticipantExists
+		return s.translator.T(locale, msgKey, nil), domain.ErrParticipantExists
 	}
 	confirmedCount, err := s.participantRepo.CountByEventIDAndStatus(ctx, eventID, domain.StatusConfirmed)
 	if err != nil {
 		return "", fmt.Errorf("count confirmed: %w", err)
 	}
 	status := domain.StatusConfirmed
-	reply := "✅ Ta demande est enregistrée !"
+	replyKey := "dm.join.confirmed"
 	if event.MaxSlots > 0 && int(confirmedCount) >= event.MaxSlots {
 		status = domain.StatusWaitlist
-		reply = "⚠️ Complet ! Tu es en **liste d'attente**."
+		replyKey = "dm.join.waitlist_full"
 	} else if forceWaitlist {
 		status = domain.StatusWaitlist
-		reply = "⚠️ Tu es en **liste d'attente**. L'organisateur validera les inscriptions."
+		replyKey = "dm.join.waitlist_forced"
 	}
 	participant := &entities.Participant{
 		EventID:  eventID,
@@ -61,7 +64,7 @@ func (s *ParticipantService) JoinEvent(ctx context.Context, eventID uint, userID
 	if err := s.participantRepo.Create(ctx, participant); err != nil {
 		return "", fmt.Errorf("create participant: %w", err)
 	}
-	return reply, nil
+	return s.translator.T(locale, replyKey, nil), nil
 }
 
 func (s *ParticipantService) GetParticipantByEventIDAndUserID(ctx context.Context, eventID uint, userID string) (*entities.Participant, error) {

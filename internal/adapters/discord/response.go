@@ -1,8 +1,6 @@
 package discord
 
-import (
-	"github.com/bwmarrin/discordgo"
-)
+import "github.com/bwmarrin/discordgo"
 
 // Nick > GlobalName > Username
 func resolveDisplayName(member *discordgo.Member) string {
@@ -26,4 +24,17 @@ func respondEphemeral(s *discordgo.Session, i *discordgo.Interaction, content st
 			Flags:   discordgo.MessageFlagsEphemeral,
 		},
 	})
+}
+
+// currentLocale returns the effective locale for this handler (bot-wide for now).
+func (h *Handler) currentLocale() string {
+	if h == nil {
+		return ""
+	}
+	return h.defaultLocale
+}
+
+// translate resolves a message key using the handler's current locale.
+func (h *Handler) translate(key string, data map[string]any) string {
+	return h.translator.T(h.currentLocale(), key, data)
 }

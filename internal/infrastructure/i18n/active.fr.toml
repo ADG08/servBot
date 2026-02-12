@@ -1,0 +1,347 @@
+[errors.generic]
+other = "❌ Une erreur est survenue."
+
+[success.generic]
+other = "✅ Opération réussie."
+
+[errors.event_not_found]
+other = "❌ Événement non trouvé."
+
+[errors.event_locked]
+other = "🔒 Cette sortie est verrouillée. Aucune modification n'est possible."
+
+[errors.only_organizer_can_edit]
+other = "❌ Seul l'organisateur peut modifier la sortie."
+
+[errors.only_organizer_can_manage_waitlist]
+other = "❌ Seul l'organisateur peut gérer la liste d'attente."
+
+[errors.only_organizer_can_remove]
+other = "❌ Seul l'organisateur peut retirer des participants."
+
+[errors.only_organizer_can_accept]
+other = "❌ Seul l'organisateur peut accepter."
+
+[errors.only_organizer_can_accept_candidate]
+other = "❌ Seul l'organisateur peut accepter ce potentiel intéressé."
+
+[errors.only_organizer_can_refuse_candidate]
+other = "❌ Seul l'organisateur peut refuser ce potentiel intéressé."
+
+[errors.cannot_reduce_slots]
+other = "❌ Impossible de réduire à {{.Slots}} places : il y a déjà {{.ConfirmedCount}} participants confirmés. Retire d'abord des participants."
+
+[errors.invalid_slots]
+other = "❌ Nombre de places invalide (positif ou vide)."
+
+[errors.datetime_required]
+other = "❌ Date et heure requises (JJ/MM/AAAA et HH:MM)."
+
+[errors.datetime_in_past]
+other = "❌ La date et l'heure doivent être dans le futur."
+
+[dm.join.already_interested]
+other = "ℹ️ Tu as déjà manifesté ton intérêt."
+
+[dm.join.already_waitlist]
+other = "ℹ️ Tu es déjà en liste d'attente."
+
+[dm.join.confirmed]
+other = "✅ Ta demande est enregistrée !"
+
+[dm.join.waitlist_full]
+other = "⚠️ Complet ! Tu es en **liste d'attente**."
+
+[dm.join.waitlist_forced]
+other = "⚠️ Tu es en **liste d'attente**. L'organisateur validera les inscriptions."
+
+[dm.leave.confirmed]
+other = "🗑️ Tu t'es désisté."
+
+[dm.removed_by_organizer]
+other = "🚪 Tu as été retiré de la sortie **{{.EventTitle}}** par l'organisateur."
+
+[dm.waitlist.promoted_auto]
+other = "🎉 **Bonne nouvelle !** Une place s'est libérée pour **{{.EventTitle}}**, tu es maintenant parmi les confirmés !"
+
+[dm.waitlist.promoted_by_organizer]
+other = "🎉 **Bonne nouvelle !** Tu as été promu pour **{{.EventTitle}}** par l'organisateur !"
+
+[errors.question_event_not_found]
+other = "❌ Impossible de retrouver la sortie pour cette question."
+
+[errors.question_thread_unavailable]
+other = "❌ Le thread privé des questions n'est pas disponible pour cette sortie."
+
+[errors.question_only_organizer_can_answer]
+other = "❌ Seul l'organisateur peut répondre à cette question."
+
+[errors.question_invalid_event_id]
+other = "❌ Identifiant de sortie invalide pour la question."
+
+[errors.question_required]
+other = "❌ Merci de saisir une question."
+
+[errors.question_member_unknown]
+other = "❌ Impossible d'identifier le membre qui pose la question."
+
+[errors.question_send_failed]
+other = "❌ Impossible d'envoyer la question à l'organisateur."
+
+[success.question_sent]
+other = "✅ Ta question a été envoyée à l'organisateur."
+
+[errors.answer_invalid_payload]
+other = "❌ Données de réponse invalides."
+
+[errors.answer_invalid_event_id]
+other = "❌ Identifiant de sortie invalide pour la réponse."
+
+[errors.answer_required]
+other = "❌ Merci de saisir une réponse."
+
+[errors.answer_event_not_found]
+other = "❌ Impossible de retrouver la sortie pour cette réponse."
+
+[success.answer_sent]
+other = "✅ Réponse envoyée en MP au membre."
+
+[info.waitlist.empty]
+other = "ℹ️ Il n'y a personne en liste d'attente."
+
+[info.no_confirmed_to_remove]
+other = "ℹ️ Il n'y a aucun participant confirmé à retirer."
+
+[errors.no_selection]
+other = "❌ Aucune sélection."
+
+[errors.invalid_selection]
+other = "❌ Sélection invalide."
+
+[errors.no_participant_removed]
+other = "❌ Aucun participant n'a pu être retiré."
+
+[success.participant_promoted]
+other = "✅ **{{.Username}}** a été fait monter de la liste d'attente."
+
+[success.participant_promoted_with_quota]
+other = "✅ **{{.Username}}** a été fait monter de la liste d'attente. Le nombre de places a été augmenté de 1 automatiquement."
+
+[success.participant_removed_single]
+other = "✅ {{.Mention}} a été retiré de la sortie."
+
+[success.participant_removed_many]
+other = "✅ {{.Count}} participants retirés : {{.Mentions}}"
+
+[errors.finalize_generic]
+other = "❌ Erreur lors de la finalisation."
+
+[errors.finalize_only_organizer]
+other = "❌ Seul l'organisateur de cette sortie peut finaliser l'étape 1."
+
+[errors.finalize_already_done]
+other = "ℹ️ Cette sortie a déjà été finalisée."
+
+[success.finalize_step1]
+other = "✅ Étape 1 finalisée ! Les participants confirmés ont été notifiés et l'événement a été ajouté au calendrier Discord."
+
+[errors.toggle_waitlist_only_organizer]
+other = "❌ Seul l'organisateur peut changer le mode de liste d'attente."
+
+[errors.toggle_waitlist_locked]
+other = "🔒 Cette sortie est verrouillée. Le mode de liste d'attente ne peut plus être modifié."
+
+[errors.toggle_waitlist_update_failed]
+other = "❌ Erreur lors de la mise à jour du mode de liste d'attente."
+
+[success.toggle_waitlist]
+other = "✅ Mode liste d'attente: **{{.Mode}}**."
+
+[info.create_forum_post]
+other = "📌 Création du post dans le forum..."
+
+[errors.participant_not_waitlist]
+other = "❌ Ce participant n'est plus en liste d'attente."
+
+[errors.participant_not_found]
+other = "❌ Participant introuvable."
+
+[errors.remove_command_wrong_channel]
+other = "❌ Cette commande doit être utilisée dans le salon privé d'une sortie."
+
+[dm.finalize_confirmed_with_link]
+other = "🎉 **Ta participation à [{{.EventTitle}}]({{.Link}}) est confirmée !**"
+
+[dm.finalize_confirmed_no_link]
+other = "🎉 **Ta participation à {{.EventTitle}} est confirmée !**"
+
+[dm.finalize_confirmed_footer]
+other = "\nÀ bientôt !"
+
+[dm.organizer_accepted]
+other = "✅ **L'organisateur de {{.EventTitle}} t'a accepté !** Ta participation est confirmée."
+
+[dm.organizer_refused]
+other = "L'organisateur de **{{.EventTitle}}** a refusé ton inscription."
+
+[success.organizer_refused]
+other = "✅ {{.Username}} a été refusé et retiré de la sortie."
+
+[info.ask_question_organizer]
+other = "En tant qu'organisateur, tu reçois les questions dans le thread **Questions** du salon privé ; inutile de t'en poser une."
+
+[info.no_promotion_done]
+other = "Aucune promotion effectuée."
+
+[info.private_channel_intro]
+other = "💬 Salon privé pour cette sortie. Les questions des participants te seront relayées ici par le bot (thread **Questions**)."
+
+[info.questions_thread_intro]
+other = "Les questions des participants te seront relayées ici par le bot."
+
+# ── UI: DMs organisateur, boutons, calendrier ──
+[ui.dm_organizer_tri_title_link]
+other = "**Tri pour la sortie :** [{{.EventTitle}}]({{.Link}})\n\n"
+[ui.dm_organizer_tri_title]
+other = "**Tri pour la sortie : {{.EventTitle}}**\n\n"
+[ui.dm_organizer_tri_date]
+other = "📅 {{.Date}}\n\n"
+[ui.dm_organizer_tri_confirmed_header]
+other = "✅ **Potentiels intéressés confirmés :**\n"
+[ui.dm_organizer_tri_waitlist_header]
+other = "⏳ **Potentiels intéressés en attente :**\n"
+[ui.dm_organizer_tri_footer]
+other = "\nClique sur **Finaliser l'étape 1** quand tu as validé la liste."
+[ui.btn_finalize_step1]
+other = "Finaliser l'étape 1"
+[ui.dm_organizer_new_registration_link]
+other = "**Nouvelle inscription pour :** [{{.EventTitle}}]({{.Link}})\n\n<@{{.UserID}}> ({{.Username}}) s'est déclaré potentiellement intéressé.\n\nAccepter ou refuser ce potentiel intéressé ?"
+[ui.dm_organizer_new_registration]
+other = "**Nouvelle inscription pour : {{.EventTitle}}**\n\n<@{{.UserID}}> ({{.Username}}) s'est déclaré potentiellement intéressé.\n\nAccepter ou refuser ce potentiel intéressé ?"
+[ui.btn_accept]
+other = "Accepter"
+[ui.btn_refuse]
+other = "Refuser"
+[ui.dm_waitlist_slot_freed_link]
+other = "**Une place s'est libérée pour :** [{{.EventTitle}}]({{.Link}})\n\nFaire monter <@{{.UserID}}> ({{.Username}}) de la liste d'attente ?"
+[ui.dm_waitlist_slot_freed]
+other = "**Une place s'est libérée pour : {{.EventTitle}}**\n\nFaire monter <@{{.UserID}}> ({{.Username}}) de la liste d'attente ?"
+[ui.btn_ignore]
+other = "Ignorer"
+[ui.calendar_location_placeholder]
+other = "Voir les détails de la sortie"
+[ui.dm_date_line]
+other = "📅 {{.Date}}"
+
+# ── UI: listes d'attente / retrait ──
+[ui.waitlist_manage_intro]
+other = "**Liste d'attente** — Choisissez qui faire monter :"
+[ui.waitlist_option_promote]
+other = "Faire monter"
+[ui.waitlist_placeholder_range]
+other = "Faire monter un membre ({{.Start}}–{{.End}})"
+[ui.waitlist_manage_truncated]
+other = "\n\n_(Seuls les {{.Max}} premiers sont dans les menus ; rouvrez « Gérer la liste d'attente » après des promotions pour voir la suite.)_"
+[ui.remove_select_intro]
+other = "Sélectionne le(s) membre(s) à retirer de la sortie :"
+[ui.remove_option_description]
+other = "Retirer de la sortie"
+[ui.remove_placeholder]
+other = "Choisir un ou plusieurs membres"
+
+# ── UI: modals questions / réponses ──
+[ui.modal_ask_question_title]
+other = "Poser une question"
+[ui.modal_ask_question_label]
+other = "Ta question"
+[ui.modal_ask_question_placeholder]
+other = "Ex: Où se retrouve-t-on exactement ?"
+[ui.modal_answer_title]
+other = "Ta réponse"
+[ui.modal_answer_label]
+other = "Ta réponse"
+[ui.modal_answer_placeholder]
+other = "Ta réponse sera envoyée en MP au membre."
+[ui.question_thread_ask_suffix]
+other = " te demande :\n"
+[ui.btn_reply]
+other = "Répondre"
+[ui.dm_answer_header_link]
+other = "✉️ **[{{.EventTitle}}]({{.Link}})** – Réponse de l'organisateur\n\n"
+[ui.dm_answer_header]
+other = "✉️ **{{.EventTitle}}** – Réponse de l'organisateur\n\n"
+[ui.dm_answer_your_question]
+other = "**Ta question :**\n"
+[ui.dm_answer_label]
+other = "**Réponse :**\n"
+
+# ── UI: modal création / édition sortie ──
+[ui.placeholder_title]
+other = "Ex: Resto, Ciné, Soirée jeux..."
+[ui.placeholder_desc]
+other = "Lieu, adresse, infos pratiques..."
+[ui.placeholder_date]
+other = "Ex: 15/02/2026 (jour/mois/année)"
+[ui.placeholder_time]
+other = "Ex: 14:00 ou 18:30"
+[ui.placeholder_slots]
+other = "Ex: 4 ou vide = illimité"
+[ui.template_title_default]
+other = "Sortie de test"
+[ui.template_desc_default]
+other = "Lieu de test, adresse, infos pratiques..."
+[ui.template_date_default]
+other = "01/01/2030"
+[ui.template_time_default]
+other = "18:00"
+[ui.template_slots_default]
+other = "4"
+[ui.modal_create_event_title]
+other = "Organiser une sortie"
+[ui.modal_create_event_template_title]
+other = "Organiser une sortie (template)"
+[ui.label_title]
+other = "Titre"
+[ui.label_details]
+other = "Détails (Lieu, etc.)"
+[ui.label_date]
+other = "Date"
+[ui.label_time]
+other = "Heure"
+[ui.label_slots]
+other = "Nombre de places"
+[ui.modal_edit_event_title]
+other = "Modifier la sortie"
+[ui.default_private_channel_name]
+other = "sortie"
+
+# ── UI: boutons embed ──
+[ui.btn_edit_event]
+other = "✏️ Modifier la sortie"
+[ui.btn_ask_question]
+other = "❓ Poser une question"
+[ui.btn_waitlist_auto]
+other = "⏳ Auto"
+[ui.btn_waitlist_manual]
+other = "⏳ Manuel"
+[ui.btn_manage_waitlist]
+other = "⚙️ Gérer la liste d'attente"
+[ui.btn_remove_participant]
+other = "🗑️ Retirer un participant"
+
+# ── Commandes slash ──
+[cmd.sortie.description]
+other = "Créer une nouvelle sortie"
+[cmd.sortie_template.description]
+other = "Ouvrir le formulaire de sortie pré-rempli pour le debug"
+[cmd.retirer.description]
+other = "Retirer un membre d'une sortie (à utiliser dans le salon privé)"
+
+# ── Erreurs création événement ──
+[errors.create_forum_failed]
+other = "Erreur lors de la création du post (Vérifie que le Bot a la permission 'Créer des messages publics' et 'Créer des fils')."
+[errors.create_private_channel_failed]
+other = "❌ Post forum créé mais erreur lors de la création du salon privé. Vérifie les permissions du bot (Gérer les salons)."
+[errors.create_event_save_failed]
+other = "❌ Erreur lors de la sauvegarde de l'événement."
+

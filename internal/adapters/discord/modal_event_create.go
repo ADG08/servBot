@@ -6,6 +6,7 @@ import (
 	"log"
 	"strconv"
 
+	"servbot/internal/domain"
 	"servbot/internal/domain/entities"
 	pkgdiscord "servbot/pkg/discord"
 
@@ -33,26 +34,25 @@ func (h *Handler) handleCreateEventModalSubmit(s *discordgo.Session, i *discordg
 	title, desc, dateStr, timeStr, slotsStr := pkgdiscord.ExtractModalData(data)
 
 	if dateStr == "" || timeStr == "" {
-		respondEphemeral(s, i.Interaction, "❌ Date et heure requises (JJ/MM/AAAA et HH:MM).")
+		respondEphemeral(s, i.Interaction, h.translate("errors.datetime_required", nil))
 		return
 	}
 	scheduledAt, err := pkgdiscord.ParseEventDateTime(dateStr, timeStr)
 	if err != nil {
-		// When ParseEventDateTime returns a domain error, resolve it via i18n.
-		if msg := pkgdiscord.DomainErrorMessage(err); msg != "" {
-			respondEphemeral(s, i.Interaction, "❌ "+msg)
+		// When ParseEventDateTime returns a domain error, resolve it via the domain code.
+		if code := domain.Code(err); code != "" {
+			respondEphemeral(s, i.Interaction, h.translate("errors."+code, nil))
 		} else {
-			respondEphemeral(s, i.Interaction, "❌ "+err.Error())
+			respondEphemeral(s, i.Interaction, h.translate("errors.generic", nil))
 		}
 		return
 	}
 	slots, err := parseSlots(slotsStr)
 	if err != nil {
-		respondEphemeral(s, i.Interaction, "❌ Nombre de places invalide (positif ou vide).")
+		respondEphemeral(s, i.Interaction, h.translate("errors.invalid_slots", nil))
 		return
 	}
-
-	respondEphemeral(s, i.Interaction, "Création du post dans le forum...")
+	respondEphemeral(s, i.Interaction, h.translate("info.create_forum_post", nil))
 
 	user := i.Member.User
 	displayName := resolveDisplayName(i.Member)
@@ -71,7 +71,7 @@ func (h *Handler) handleCreateEventModalSubmit(s *discordgo.Session, i *discordg
 	if err != nil {
 		log.Println("❌ Erreur création forum post:", err)
 		s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-			Content: "Erreur lors de la création du post (Vérifie que le Bot a la permission 'Créer des messages publics' et 'Créer des fils').",
+			Content: h.translate("errors.create_forum_failed", nil),
 		})
 		return
 	}
@@ -95,7 +95,7 @@ func (h *Handler) handleCreateEventModalSubmit(s *discordgo.Session, i *discordg
 	}
 	privChannelName := sanitizeChannelName(title)
 	if privChannelName == "" {
-		privChannelName = "sortie"
+		privChannelName = h.translate("ui.default_private_channel_name", nil)
 	}
 	privData := discordgo.GuildChannelCreateData{
 		Name:                 privChannelName,
@@ -109,14 +109,14 @@ func (h *Handler) handleCreateEventModalSubmit(s *discordgo.Session, i *discordg
 	if err != nil {
 		log.Printf("❌ Création salon privé sortie: %v", err)
 		s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-			Content: "❌ Post forum créé mais erreur lors de la création du salon privé. Vérifie les permissions du bot (Gérer les salons).",
+			Content: h.translate("errors.create_private_channel_failed", nil),
 		})
 		return
 	}
 	grantPrivateChannelAccess(s, privCh.ID, creatorID)
 	grantPrivateChannelAccess(s, privCh.ID, botID)
 
-	_, _ = s.ChannelMessageSend(privCh.ID, "💬 Salon privé pour cette sortie. Les questions des participants te seront relayées ici par le bot (thread **Questions**).")
+	_, _ = s.ChannelMessageSend(privCh.ID, h.translate("info.private_channel_intro", nil))
 
 	questionsThreadID := ""
 	questionsThread, threadErr := s.ThreadStart(privCh.ID, "Questions", discordgo.ChannelTypeGuildPrivateThread, 1440)
@@ -126,7 +126,7 @@ func (h *Handler) handleCreateEventModalSubmit(s *discordgo.Session, i *discordg
 		questionsThreadID = questionsThread.ID
 		_ = s.ThreadMemberAdd(questionsThread.ID, creatorID)
 		_ = s.ThreadMemberAdd(questionsThread.ID, botID)
-		_, _ = s.ChannelMessageSend(questionsThread.ID, "Les questions des participants te seront relayées ici par le bot.")
+		_, _ = s.ChannelMessageSend(questionsThread.ID, h.translate("info.questions_thread_intro", nil))
 	}
 
 	event := &entities.Event{
@@ -146,7 +146,7 @@ func (h *Handler) handleCreateEventModalSubmit(s *discordgo.Session, i *discordg
 	if err := h.eventUseCase.CreateEvent(ctx, event, displayName); err != nil {
 		log.Printf("❌ Erreur lors de la sauvegarde de l'événement: %v", err)
 		s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-			Content: "❌ Erreur lors de la sauvegarde de l'événement.",
+			Content: h.translate("errors.create_event_save_failed", nil),
 		})
 		return
 	}
