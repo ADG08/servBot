@@ -15,7 +15,7 @@ Discord bot (Go) for events and participants. Hexagonal architecture, sqlc + pgx
 3. Generate sqlc code: `sqlc generate` (see `sqlc.yaml`).
 
 ## Run
-
+Test
 **Docker (dev)**
 
 ```bash
